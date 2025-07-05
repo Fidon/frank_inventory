@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcat icon" href="{% static 'imgs/logo1.png' %}" />
+    <title>Access denied | ShopApp</title>
+    <link href="{% static 'fontawesome-6.2.1/css/all.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'scss/custom.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/master.css' %}" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <div id="container">
+      <header class="w-100 float-start bg-color2">
+        <div class="divlogo">
+          <a href="{% url 'dashboard_page' %}">
+            <img src="{% static 'imgs/logo.png' %}" />
+            <span class="text-white">Mama-rich Hardware</span>
+          </a>
+        </div>
+      </header>
+      <div class="main">
+        <div class="wrapper w-100 py-5" id="contents">
+          <div class="d-block w-100 float-start text-center">
+            <h2 class="d-block w-100 float-start py-5 text-color5">Access denied!</h2>
+            <a href="{% url 'dashboard_page' %}" class="btn btn-color2 text-white d-inline-block"><i class="fas fa-arrow-left"></i> &nbsp; Return home</a>
+          </div>
+        </div>
+      </div>
+      <footer class="text-white bg-color2">
+        <span>&copy; Mama-rich Hardware</span>
+        <span>All rights reserved @ 2024</span>
+      </footer>
+    </div>
+    <script src="{% static 'js/jquery-3.6.1.min.js' %}"></script>
+    <script src="{% static 'bootstrap-5.3.0/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'js/master.js' %}"></script>
+  </body>
+</html>
