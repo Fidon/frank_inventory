@@ -1,0 +1,53 @@
+.sidebar-nav .nav-link.dashboard {
+  background-color: var(--primary-color);
+  color: white;
+  border-left-color: var(--accent-color);
+}
+
+.welcome-section {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 53, 0.1) 0%,
+    rgba(255, 210, 63, 0.1) 100%
+  );
+  padding: 1.5rem;
+  border-radius: 20px;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-section::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 210, 63, 0.3) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+}
+
+.welcome-text {
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-text h2 {
+  font-size: 1.6rem;
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.welcome-text p {
+  color: var(--text-color);
+  font-size: 1rem;
+  opacity: 0.8;
+  margin: 0;
+}

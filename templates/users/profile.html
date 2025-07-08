@@ -1,0 +1,148 @@
+{% extends 'master.html' %}
+{% load static %}
+{% block title %}
+  Profile
+{% endblock %}
+{% block styles %}
+  <link href="{% static 'css/users/profile.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+{% block contents %}
+    <div class="container-fluid p-1">
+        <div class="row">
+            <div class="col-12">
+                <div class="user-card" id="user_div">
+                    <!-- Header -->
+                    <div class="user-header text-center">
+                        <div class="user-avatar mx-auto">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h3 class="mb-2" id="fullname">{{profile.fullname}}</h3>
+                        <p class="mb-0" id="username">@{{profile.username}}</p>
+                    </div>
+
+                    <!-- User Details -->
+                    <div class="px-4 py-2">
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-calendar me-2"></i>Registration Date
+                            </div>
+                            <div class="info-value" id="regdate">{{profile.regdate}}</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-phone me-2"></i>Phone Number
+                            </div>
+                            <div class="info-value" id="phone">{{profile.phone}}</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                {% if request.user.is_admin %}
+                            <button class="btn action-btn btn-update btn-ripple w-100 btn-pulse" id="updateBtn" data-bs-toggle="offcanvas" data-bs-target="#profile_update_canvas">
+                                <i class="fas fa-user-edit me-2"></i>Update profile
+                            </button>
+                            {% else %}
+                            <button class="btn action-btn btn-update btn-ripple w-100 btn-pulse" id="updateBtn" data-bs-toggle="offcanvas" data-bs-target="#contact_update_canvas">
+                                <i class="fas fa-user-edit me-2"></i>Update contact
+                            </button>
+                            {% endif %}
+                            </div>
+                            <div class="col-6">
+                                <button class="btn action-btn btn-reset btn-ripple w-100" id="resetPasswordBtn" data-bs-toggle="offcanvas" data-bs-target="#password_update_canvas">
+                                    <i class="fas fa-key me-2"></i>Update Password
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-start" id="password_update_canvas">
+    <div class="offcanvas-header bg-charcoal">
+      <h6 class="offcanvas-title text-white">Change password..</h6>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <form action="{% url 'user_profile' %}" autocomplete="off" class="d-block w-100 float-start" id="change_password_form">
+        <div class="formsms w-100 float-start my-1 text-start"></div>
+        <div class="form-floating d-block w-100 float-start my-1">
+          <input type="password" class="form-control" name="old_password" id="pass_current" placeholder="p" required />
+          <label for="pass_current" class="form-label">Current password</label>
+        </div>
+        <div class="form-floating d-block w-100 float-start my-1">
+          <input type="password" class="form-control" name="new_password1" id="pass_newpass" placeholder="p" required />
+          <label for="pass_newpass" class="form-label">New password</label>
+        </div>
+        <div class="form-floating d-block w-100 float-start my-1">
+          <input type="password" class="form-control" name="new_password2" id="pass_confirm" placeholder="p" required />
+          <label for="pass_confirm" class="form-label">Confirm new password</label>
+        </div>
+        <div class="form-floating d-block w-100 float-start my-3 text-end">
+          <button type="button" class="btn btn-danger d-inline-block me-2" id="pass_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+          <button type="submit" class="btn btn-success d-inline-block" id="pass_submit_btn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if request.user.is_admin %}
+    <div class="offcanvas offcanvas-start" id="profile_update_canvas">
+      <div class="offcanvas-header bg-charcoal">
+        <h6 class="offcanvas-title text-white">Update profile..</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <form action="{% url 'user_profile' %}" autocomplete="off" class="d-block w-100 float-start" id="profile_update_form">
+          <div class="formsms w-100 float-start my-1 text-start"></div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" id="prof_fullname" name="fullname" placeholder="p" value="{{ profile.fullname }}" required />
+            <label for="prof_fullname" class="form-label">Fullname</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" pattern="^[A-Za-z]{3,32}$" value="{{profile.username}}" maxlength="32" title="Username must be 3 to 32 letters only" id="prof_username" name="username" placeholder="p" value="{{ profile.username }}" required />
+            <label for="prof_username" class="form-label">Username</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="tel" maxlength="13" pattern="^\+255\d{9}$" title="Phone number format +255XXXXXXXXX" class="form-control" id="prof_contact" name="phone" placeholder="p" value="{{ profile.mobile }}" required />
+            <label for="prof_contact" class="form-label">Mobile</label>
+          </div>
+          <textarea name="comment" class="d-none"></textarea>
+          <input type="hidden" name="update_profile" value="1" />
+          <div class="form-floating d-block w-100 float-start my-3 text-end">
+            <button type="button" class="btn btn-danger d-inline-block me-2" id="profile_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-success d-inline-block" id="profile_submit_btn">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <div class="offcanvas offcanvas-start" id="contact_update_canvas">
+      <div class="offcanvas-header bg-charcoal">
+        <h6 class="offcanvas-title text-white">Change phone number..</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <form action="{% url 'user_profile' %}" autocomplete="off" class="d-block w-100 float-start" id="profile_update_form">
+          <div class="formsms w-100 float-start my-1 text-start"></div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="tel" maxlength="13" pattern="^\+255\d{9}$" title="Phone number format +255XXXXXXXXX" class="form-control" name="change_contact" id="prof_contact" value="{{ profile.mobile }}" placeholder="p" required />
+            <label for="prof_contact" class="form-label">Current contact</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-3 text-end">
+            <button type="button" class="btn btn-danger d-inline-block me-2" id="profile_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-success d-inline-block" id="profile_submit_btn">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'js/users/profile.js' %}"></script>
+{% endblock %}

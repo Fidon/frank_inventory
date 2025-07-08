@@ -51,13 +51,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     # Phone number validator
     phone_validator = RegexValidator(
         regex=r'^\+?1?\d{9,13}$',
-        message=_("Phone number must be entered in the format: '+255000000000'. Up to 13 digits allowed.")
+        message=_("Invalid phone number format.")
     )
 
     # Username validator (only alphabets a-zA-Z)
     username_validator = RegexValidator(
         regex=r'^[a-zA-Z]+$',
-        message=_("Username must contain only alphabets (a-zA-Z).")
+        message=_("Only alphabets allowed.")
     )
 
     # Primary key

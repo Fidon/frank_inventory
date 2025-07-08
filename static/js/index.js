@@ -41,7 +41,7 @@ $(function () {
         $("#auth_submit_button")
           .html("<i class='fas fa-sign-in-alt me-2'></i>Login")
           .attr("type", "submit");
-        var fdback = `<div class="alert alert-danger alert-dismissible fade show px-2 m-0 d-block w-100"><i class='fas fa-exclamation-circle'></i> Internal error. <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button></div>`;
+        var fdback = `<div class="alert alert-danger alert-dismissible fade show px-2 m-0 d-block w-100"><i class='fas fa-exclamation-circle'></i> Unknown error. <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button></div>`;
         $("#login_form .formsms").html(fdback).show();
       },
     });
