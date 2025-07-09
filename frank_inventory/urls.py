@@ -10,4 +10,5 @@ urlpatterns = [
     path('', v.index_page, name='index_page'),
     path('dashboard/', v.dashboard_page, name='dashboard_page'),
     path('users/', include('apps.users.urls')),
+    path('shops/', include('apps.shops.urls')),
 ]

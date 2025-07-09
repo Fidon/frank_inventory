@@ -1,0 +1,217 @@
+{% extends 'master.html' %}
+{% load static %}
+{% block title %}
+  Shops
+{% endblock %}
+{% block styles %}
+  <link href="{% static 'css/shops/shops.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+{% block contents %}
+  {% if shopinfo %}
+    <div class="container-fluid p-1">
+        <div class="row">
+            <div class="col-12">
+                <div class="user-card" id="shop_div">
+                    <!-- Header -->
+                    <div class="shop-header text-center">
+                        <div class="shop-avatar mx-auto">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <h3 class="mb-2">{{info.names}}</h3>
+                        <p class="mb-0">@{{info.abbrev}}</p>
+                    </div>
+
+                    <!-- User Details -->
+                    <div class="px-4 py-2">
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-calendar me-2"></i>Registration Date
+                            </div>
+                            <div class="info-value">{{info.regdate}}</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-users me-2"></i>Total users
+                            </div>
+                            <div class="info-value">{{info.users_count}} user(s)</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-sitemap me-2"></i>Total items
+                            </div>
+                            <div class="info-value">{{info.items_count}} item(s)</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-money-bills me-2"></i>Net worth
+                            </div>
+                            <div class="info-value">{{info.networth}} TZS</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-comment me-2"></i>Comment
+                            </div>
+                            <div class="comment-section">
+                                <p class="comment-text" id="comment">{{info.comment|linebreaksbr}}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <div class="row g-3">
+                            <div class="col-6">
+                            <button class="btn action-btn btn-update btn-ripple w-100 btn-pulse" id="updateBtn" data-bs-toggle="offcanvas" data-bs-target="#update_shop_canvas">
+                                <i class="fas fa-user-edit me-2"></i>Update
+                            </button>
+                            </div>
+                            {% if delete_info %}
+                            <div class="col-6">
+                                <button class="btn action-btn btn-delete btn-ripple w-100" id="deleteBtn" data-bs-toggle="modal" data-bs-target="#confirm_delete_modal">
+                                    <i class="fas fa-key me-2"></i>Delete
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-start" id="update_shop_canvas">
+      <div class="offcanvas-header bg-charcoal">
+        <h6 class="offcanvas-title text-white">Update shop info..</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body bg-background">
+        <form class="d-block w-100 float-start" id="new_shop_form" action="{% url 'shop_actions' %}" autocomplete="off">
+          <div class="formsms w-100 float-start my-1 text-start"></div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" id="shop_names" name="names" value="{{info.names}}" placeholder="a" required />
+            <label for="shop_names" class="form-label">Shop names</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" pattern="^[A-Za-z]{3,10}$" title="Abbrev must be 3 to 10 letters only" id="shop_abbrev" name="abbrev" value="{{info.abbrev}}" placeholder="a" required />
+            <label for="shop_abbrev" class="form-label">Abbreviation e.g. CIVE</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <textarea class="form-control" id="shop_describe" placeholder="d" style="min-height:150px;" name="comment">{{info.comment}}</textarea>
+            <label for="shop_describe" class="form-label">Extra comment (optional)</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-3 text-end">
+            <button type="button" class="btn btn-danger d-inline-block me-2" id="shop_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-success d-inline-block" id="shop_submit_btn">Save</button>
+          </div>
+          <input type="hidden" name="edit_shop" value="{{ info.id }}" id="get_shop_id" />
+        </form>
+      </div>
+    </div>
+
+    {% if delete_info %}
+    <div class="modal fade" id="confirm_delete_modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-charcoal">
+            <h6 class="modal-title text-white"><i class="fas fa-triangle-exclamation"></i> &nbsp; Delete shop..</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="formsms d-block float-start w-100 text-start"></div>
+            <div class="form-floating d-block w-100 float-start text-danger text-center fw-bold py-3 my-1">Are you sure you want to delete this shop and all of its users, items, sales records, etc..?</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="cancel_delete_btn"><i class="fas fa-times-circle"></i> No</button>
+            <button type="button" class="btn btn-danger" id="confirm_delete_btn"><i class="fas fa-check-circle"></i> Yes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% else %}
+    <div class="search-box input-group w-100 float-start">
+      <input type="text" class="form-control" id="shops_search" placeholder="Search.." autocomplete="off" />
+      <button type="button" class="btn btn-primary text-white ms-1" id="shops_filter_clear" title="Clear filters"><i class="fas fa-refresh"></i></button>
+      <button type="button" class="btn btn-charcoal text-white ms-1" title="Add new shop" data-bs-toggle="offcanvas" data-bs-target="#new_shop_canvas"><i class="fas fa-plus-circle"></i></button>
+    </div>
+
+    <div class="offcanvas offcanvas-start" id="new_shop_canvas">
+      <div class="offcanvas-header bg-charcoal py-4">
+        <h5 class="offcanvas-title text-white">Register new shop..</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body bg-background">
+        <form class="d-block w-100 float-start" id="new_shop_form" action="{% url 'shop_actions' %}" autocomplete="off">
+          <div class="formsms w-100 float-start my-1 text-start"></div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" id="shop_names" name="names" placeholder="a" required />
+            <label for="shop_names" class="form-label">Shop names</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" pattern="^[A-Za-z]{3,10}$" title="Abbrev must be 3 to 10 letters only" id="shop_abbrev" name="abbrev" placeholder="a" required />
+            <label for="shop_abbrev" class="form-label">Abbreviation e.g. CIVE</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <textarea class="form-control" id="shop_describe" placeholder="d" style="min-height:150px;" name="comment"></textarea>
+            <label for="shop_describe" class="form-label">Extra comment (optional)</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-3 text-end">
+            <button type="button" class="btn btn-danger d-inline-block me-2" id="shop_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-success d-inline-block" id="shop_submit_btn">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <div class="table-container" id="table_container">
+      <div class="table-responsive">
+        <table class="table" id="shops_table">
+          <thead>
+            <tr>
+              <th>S/N</th>
+              <th>Shopnames</th>
+              <th>abbrev</th>
+              <th>RegDate</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal fade" id="date_filter_modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-secondary">
+            <h6 class="modal-title text-white">Select range of reg. dates..</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-floating d-block w-100 float-start my-1">
+              <input type="date" class="form-control text-charcoal" id="min_date" placeholder="d" />
+              <label for="min_date" class="text-charcoal">Start date</label>
+            </div>
+            <div class="form-floating d-block w-100 float-start my-1">
+              <input type="date" class="form-control text-charcoal" id="max_date" placeholder="d" />
+              <label for="max_date" class="text-charcoal">End date</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-long-arrow-left"></i></button>
+            <button type="button" class="btn btn-primary text-white" id="date_clear"><i class="fas fa-refresh"></i></button>
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="date_filter_btn"><i class="fas fa-check-circle"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" value="{% url 'shops_page' %}" id="shops_list_url" />
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'datatables/datatables.min.js' %}"></script>
+  <script src="{% static 'js/shops/shops.js' %}"></script>
+{% endblock %}

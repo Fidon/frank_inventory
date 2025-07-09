@@ -37,6 +37,13 @@
 
                         <div class="info-row">
                             <div class="info-label">
+                                <i class="fas fa-store me-2"></i>Shop name
+                            </div>
+                            <div class="info-value">{{info.shop.names}} ({{info.shop.abbrev}})</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
                                 <i class="fas fa-calendar me-2"></i>Registration Date
                             </div>
                             <div class="info-value" id="regdate">{{info.regdate}}</div>
@@ -47,6 +54,13 @@
                                 <i class="fas fa-right-to-bracket me-2"></i>Last Login
                             </div>
                             <div class="info-value" id="lastlogin">{{info.lastlogin}}</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-money-bills me-2"></i>Total sales
+                            </div>
+                            <div class="info-value">0.00</div>
                         </div>
 
                         <div class="info-row">
@@ -112,6 +126,19 @@
           <div class="form-floating d-block w-100 float-start my-1">
             <input type="tel" class="form-control" maxlength="13" pattern="^\+255\d{9}$" title="Phone number format +255XXXXXXXXX" value="{{info.mobile}}" id="reg_phone" name="phone" placeholder="a" required />
             <label for="reg_phone" class="form-label">Mobile number +255..</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <select name="shop" id="reg_shop" required class="form-select">
+              <option value="">Select shop</option>
+              {% for shop in shops %}
+              {% if info.shop.id == shop.id %}
+                <option value="{{ shop.id }}" selected>{{ shop.abbrev }}</option>
+                {% else %}
+                <option value="{{ shop.id }}">{{ shop.abbrev }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+            <label for="reg_shop" class="form-label">Select shop</label>
           </div>
           <div class="form-floating d-block w-100 float-start my-1">
             <textarea class="form-control" id="reg_describe" placeholder="d" style="min-height:150px;" name="comment">{{info.comment}}</textarea>
@@ -191,6 +218,15 @@
             <label for="reg_phone" class="form-label">Mobile number +255..</label>
           </div>
           <div class="form-floating d-block w-100 float-start my-1">
+            <select name="shop" id="reg_shop" required class="form-select">
+              <option value="">Select shop</option>
+              {% for shop in shops %}
+                <option value="{{ shop.id }}">{{ shop.abbrev }}</option>
+              {% endfor %}
+            </select>
+            <label for="reg_shop" class="form-label">Select shop</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
             <textarea class="form-control" id="reg_describe" placeholder="d" style="min-height:150px;" name="comment"></textarea>
             <label for="reg_describe" class="form-label">Extra comment (optional)</label>
           </div>
@@ -210,6 +246,7 @@
               <th>S/N</th>
               <th>Fullname</th>
               <th>Username</th>
+              <th>Shop</th>
               <th>RegDate</th>
               <th>Phone</th>
               <th>Status</th>

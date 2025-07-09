@@ -5,24 +5,16 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from .forms import LoginForm, UserRegistrationForm, UserUpdateForm
 from .models import CustomUser
-from django.utils import timezone
+from apps.shops.models import Shop
 from dateutil.parser import parse
 from django.contrib.auth import login, logout, authenticate
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
+from utils.util_functions import admin_required, format_phone, conv_timezone
 
-def format_phone(phone):
-    if not phone:
-        return "N/A"
-    if len(phone) >= 13:
-        return f"{phone[:4]} {phone[4:7]} {phone[7:10]} {phone[10:]}"
-    return phone
 
-def conv_timezone(dt, dt_format):
-    dtime = timezone.localtime(dt)
-    return dtime.strftime(dt_format)
 
-def handle_user_registration(post_data):
+def register_new_user(post_data):
     form = UserRegistrationForm(post_data)
     if form.is_valid():
         form.save()
@@ -36,7 +28,7 @@ def handle_user_registration(post_data):
     errorMsg = errorMsg[0] if errorMsg else "Unknown error, reload & try again"
     return {'success': False, 'sms': errorMsg}
 
-def handle_user_update(post_data, user_id):
+def handle_update_user(post_data, user_id):
     try:
         user = CustomUser.objects.get(pk=user_id, deleted=False)
     except CustomUser.DoesNotExist:
@@ -56,7 +48,7 @@ def handle_user_update(post_data, user_id):
     errorMsg = errorMsg[0] if errorMsg else "Unknown error, reload & try again"
     return {'success': False, 'sms': errorMsg}
 
-def handle_user_deletion(user_id):
+def handle_delete_user(user_id):
     try:
         user = CustomUser.objects.get(pk=user_id, deleted=False)
     except CustomUser.DoesNotExist:
@@ -66,7 +58,7 @@ def handle_user_deletion(user_id):
     user.save()
     return {'success': True, 'url': reverse('users_page')}
 
-def handle_user_blocking(user_id):
+def handle_block_user(user_id):
     try:
         user = CustomUser.objects.get(pk=user_id, deleted=False)
     except CustomUser.DoesNotExist:
@@ -76,7 +68,7 @@ def handle_user_blocking(user_id):
     user.save()
     return {'success': True}
 
-def handle_password_reset(user_id):
+def reset_user_password(user_id):
     try:
         user = CustomUser.objects.get(pk=user_id, deleted=False)
     except CustomUser.DoesNotExist:
@@ -112,8 +104,9 @@ def signout_page(request):
     return redirect(reverse('dashboard_page'))
 
 
-@login_required
 @never_cache
+@login_required
+@admin_required()
 def users_page(request):
     if request.method == 'POST':
         draw = int(request.POST.get('draw', 0))
@@ -157,6 +150,7 @@ def users_page(request):
                 'regdate': user.created_at,
                 'fullname': user.fullname,
                 'username': user.username,
+                'shop': user.shop.abbrev,
                 'phone': user.phone if user.phone else "N/A",
                 'status': "active" if user.is_active else "inactive",
                 'info': reverse('user_details', kwargs={'userid': int(user.id)})
@@ -172,9 +166,10 @@ def users_page(request):
             0: 'id',
             1: 'fullname',
             2: 'username',
-            3: 'regdate',
-            4: 'phone',
-            5: 'status',
+            3: 'shop',
+            4: 'regdate',
+            5: 'phone',
+            6: 'status',
         }
 
         # Apply sorting
@@ -193,7 +188,7 @@ def users_page(request):
                     filtered_base_data = []
                     for item in base_data:
                         column_value = str(item.get(column_field, '')).lower()
-                        if column_field == 'status':
+                        if column_field in ('status', 'shop'):
                             if column_search.lower() == column_value:
                                 filtered_base_data.append(item)
                         else:
@@ -228,6 +223,7 @@ def users_page(request):
                 'regdate': conv_timezone(item.get('regdate'),'%d-%b-%Y'),
                 'fullname': item.get('fullname'),
                 'username': item.get('username'),
+                'shop': item.get('shop'),
                 'phone': format_phone(item.get('phone')),
                 'status': item.get('status'),
                 'info': item.get('info'),
@@ -240,11 +236,14 @@ def users_page(request):
             'data': final_data,
         }
         return JsonResponse(ajax_response)
-    return render(request, 'users/users.html')
+    
+    shops = Shop.objects.all().order_by('-created_at')
+    return render(request, 'users/users.html', {'shops': shops})
 
 @never_cache
 @login_required
 @require_POST
+@admin_required()
 def users_requests(request):
     try:
         edit_user = request.POST.get('edit_user')
@@ -253,20 +252,23 @@ def users_requests(request):
         reset_password = request.POST.get('reset_password')
 
         if delete_user:
-            fdback = handle_user_deletion(delete_user)
+            fdback = handle_delete_user(delete_user)
         elif block_user:
-            fdback = handle_user_blocking(block_user)
+            fdback = handle_block_user(block_user)
         elif edit_user:
-            fdback = handle_user_update(request.POST, edit_user)
+            fdback = handle_update_user(request.POST, edit_user)
         elif reset_password:
-            fdback = handle_password_reset(reset_password)
+            fdback = reset_user_password(reset_password)
         else:
-            fdback = handle_user_registration(request.POST)
+            fdback = register_new_user(request.POST)
+
     except Exception as e:
-        fdback = {'success': False, 'sms': 'Unknown, reload & try again'}
+        fdback = {'success': False, 'sms': 'Unknown error, reload & try again'}
     return JsonResponse(fdback)
 
+@never_cache
 @login_required
+@admin_required()
 def user_details(request, userid):
     if request.method == 'GET' and not userid == request.user.id:
         try:
@@ -284,8 +286,11 @@ def user_details(request, userid):
             'mobile': userobj.phone or "+255",
             'status': "Active" if userobj.is_active else "Blocked",
             'comment': userobj.comment or 'N/A',
+            'shop': userobj.shop,
         }
-        return render(request, 'users/users.html', {'userinfo': userid, 'info': userdata})
+
+        shops = Shop.objects.all().order_by('-created_at')
+        return render(request, 'users/users.html', {'userinfo': userid, 'info': userdata, 'shops': shops})
     return redirect('users_page')
 
 @never_cache
@@ -309,7 +314,7 @@ def user_profile_page(request):
                 return JsonResponse({'success': True, 'sms': 'Contact updated successfully'})
 
             elif update_profile:
-                fdback = handle_user_update(request.POST, user.id)
+                fdback = handle_update_user(request.POST, user.id)
                 return JsonResponse(fdback)
 
             else:

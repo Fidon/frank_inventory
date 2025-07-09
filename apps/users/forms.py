@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 import re
 
 User = get_user_model()
@@ -37,7 +38,7 @@ class LoginForm(forms.Form):
 class UserRegistrationForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['username', 'fullname', 'phone', 'comment']
+        fields = ['username', 'fullname', 'phone', 'shop', 'comment']
         help_texts = {
             'username': _("Only alphabets (a-zA-Z), max 32 characters."),
             'phone': _("Format: '+255000000000'. Up to 12 digits allowed.")
@@ -119,14 +120,14 @@ class UserRegistrationForm(forms.ModelForm):
 class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['username', 'fullname', 'phone', 'comment']
+        fields = ['username', 'fullname', 'phone', 'shop', 'comment']
         help_texts = {
             'username': _("Only alphabets (a-zA-Z), max 32 characters."),
             'phone': _("Format: '+255000000000'. Up to 12 digits allowed.")
         }
 
     def __init__(self, *args, **kwargs):
-        self.instance = kwargs.get('instance')
+        # self.instance = kwargs.get('instance')
         super().__init__(*args, **kwargs)
 
     def clean_username(self):

@@ -1,16 +1,18 @@
 from django.db import models
+from apps.shops.models import Shop
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group, Permission
-from django.utils import timezone
 from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
 
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, username, fullname, phone=None, password=None, is_admin=False, **extra_fields):
+    def create_user(self, username, fullname, shop, phone=None, password=None, is_admin=False, **extra_fields):
         if not username:
             raise ValueError(_("The username field cannot be blank"))
         if not fullname:
             raise ValueError(_("The fullname field cannot be blank"))
+        if not shop:
+            raise ValueError(_("The shop field cannot be blank."))
 
         # Normalize username by converting to lowercase and stripping whitespace
         username = username.lower().strip()
@@ -23,7 +25,8 @@ class CustomUserManager(BaseUserManager):
         user = self.model(
             username=username,
             fullname=fullname,
-            phone=phone if phone else None,  # Set to None if blank
+            phone=phone if phone else None,
+            shop=shop,
             is_admin=is_admin,
             **extra_fields
         )
@@ -32,9 +35,8 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, fullname, phone=None, password=None, **extra_fields):
+    def create_superuser(self, username, fullname, shop, phone=None, password=None, **extra_fields):
         extra_fields.setdefault('is_admin', True)
-        # is_superuser is handled by PermissionsMixin, setting it to True for superusers
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
 
@@ -42,6 +44,7 @@ class CustomUserManager(BaseUserManager):
             username=username,
             fullname=fullname,
             phone=phone,
+            shop=shop,
             password=password,
             **extra_fields
         )
@@ -89,6 +92,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         default=None,
         verbose_name=_("Phone Number"),
         help_text=_("User's phone number in international format")
+    )
+
+    shop = models.ForeignKey(
+        Shop,
+        on_delete=models.PROTECT,
+        related_name='users',
+        verbose_name=_("Shop"),
+        help_text=_("The shop this user belongs to.")
     )
 
     # Django standard fields
@@ -162,7 +173,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['fullname']
+    REQUIRED_FIELDS = ['fullname', 'shop']
 
     class Meta:
         verbose_name = _("User")
@@ -174,6 +185,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             models.Index(fields=['fullname']),
             models.Index(fields=['created_at']),
             models.Index(fields=['is_active', 'deleted']),
+            models.Index(fields=['shop']),
         ]
 
     def __str__(self):
@@ -213,46 +225,4 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         self.full_clean()
         super().save(*args, **kwargs)
 
-    def soft_delete(self):
-        self.deleted = True
-        self.save(update_fields=['deleted', 'updated_at'])
 
-    def block_user(self):
-        self.is_active = False
-        self.save(update_fields=['is_active', 'updated_at'])
-
-    def unblock_user(self):
-        self.is_active = True
-        self.save(update_fields=['is_active', 'updated_at'])
-
-    @property
-    def is_blocked(self):
-        return self.is_active
-
-    @property
-    def is_staff(self):
-        return self.is_admin
-
-
-
-    # @property
-    # def is_superuser(self):
-    #     """
-    #     Property required by Django's PermissionsMixin.
-    #     Superuser status is determined by is_admin.
-    #     """
-    #     return self.is_admin
-
-    # def has_perm(self, perm, obj=None):
-    #     """
-    #     Required by Django's PermissionsMixin.
-    #     Simplistic permission check: Admins have all permissions.
-    #     """
-    #     return self.is_admin
-
-    # def has_module_perms(self, app_label):
-    #     """
-    #     Required by Django's PermissionsMixin.
-    #     Simplistic module permission check: Admins have all module permissions.
-    #     """
-    #     return self.is_admin
