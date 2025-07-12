@@ -10,7 +10,7 @@ from dateutil.parser import parse
 from django.contrib.auth import login, logout, authenticate
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
-from utils.util_functions import admin_required, format_phone, conv_timezone
+from utils.util_functions import admin_required, format_phone, conv_timezone, filter_items
 
 
 
@@ -131,7 +131,6 @@ def users_page(request):
 
         # Parse end date if provided
         if end_date_str:
-            print(f"End date string: {end_date_str}")
             parsed_end_date = parse(end_date_str).astimezone(zoneinfo.ZoneInfo("UTC"))
 
         if parsed_start_date and parsed_end_date:
@@ -179,23 +178,19 @@ def users_page(request):
         else:
             base_data = sorted(base_data, key=lambda x: x[order_column_name], reverse=True)
 
+        column_filter_types = {
+            'shop': 'exact',
+            'status': 'exact'
+        }
+
         # Apply individual column filtering
         for i in range(len(column_mapping)):
             column_search = request.POST.get(f'columns[{i}][search][value]', '')
             if column_search:
                 column_field = column_mapping.get(i)
                 if column_field:
-                    filtered_base_data = []
-                    for item in base_data:
-                        column_value = str(item.get(column_field, '')).lower()
-                        if column_field in ('status', 'shop'):
-                            if column_search.lower() == column_value:
-                                filtered_base_data.append(item)
-                        else:
-                            if column_search.lower() in column_value:
-                                filtered_base_data.append(item)
-
-                    base_data = filtered_base_data
+                    filter_type = column_filter_types.get(column_field, 'contains')
+                    base_data = [item for item in base_data if filter_items(column_field, column_search, item, filter_type)]
 
         # Apply global search
         if search_value:
@@ -289,7 +284,7 @@ def user_details(request, userid):
             'shop': userobj.shop,
         }
 
-        shops = Shop.objects.all().order_by('-created_at')
+        shops = Shop.objects.all().order_by('abbrev')
         return render(request, 'users/users.html', {'userinfo': userid, 'info': userdata, 'shops': shops})
     return redirect('users_page')
 

@@ -96,13 +96,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     shop = models.ForeignKey(
         Shop,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='users',
         verbose_name=_("Shop"),
         help_text=_("The shop this user belongs to.")
     )
 
-    # Django standard fields
     last_login = models.DateTimeField(
         null=True,
         blank=True,
@@ -111,7 +110,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         help_text=_("Date and time of the user's last login")
     )
 
-    # User status fields
     is_active = models.BooleanField(
         default=True,
         verbose_name=_("Active"),

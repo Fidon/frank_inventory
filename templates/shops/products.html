@@ -1,0 +1,328 @@
+{% extends 'master.html' %}
+{% load static %}
+{% block title %}
+  Products
+{% endblock %}
+{% block styles %}
+  <link href="{% static 'css/shops/products.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+{% block contents %}
+  {% if productinfo %}
+    <div class="container-fluid p-1">
+        <div class="row">
+            <div class="col-12">
+                <div class="user-card" id="product_div">
+                    <!-- Header -->
+                    <div class="product-header text-center">
+                        <div class="product-avatar mx-auto">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <h3 class="mb-2">{{info.name}}</h3>
+                        <p class="mb-2">@{{info.shop.abbrev}}</p>
+                        {% if info.status == 'Blocked' %}
+                        <span class="status-badge" id="status">{{info.status}}</span>
+                        {% else %}
+                        <span class="status-badge active" id="status">{{info.status}}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Product Details -->
+                    <div class="px-4 py-2">
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-calendar-days me-2"></i>Registration Date
+                            </div>
+                            <div class="info-value pe-2">{{info.regdate}}</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-calendar-days me-2"></i>Last updated
+                            </div>
+                            <div class="info-value pe-2">{{info.lastupdated}}</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-money-bill-1-wave me-2"></i>Buying cost/price
+                            </div>
+                            <div class="info-value pe-2">{{info.cost_txt}} TZS</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-money-bill-transfer me-2"></i>Selling price
+                            </div>
+                            <div class="info-value pe-2">{{info.price_txt}} TZS</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-boxes-stacked me-2"></i>Quantity in stock
+                            </div>
+                            <div class="info-value pe-2">{{info.qty_txt}}</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-money-bills me-2"></i>Overall sales
+                            </div>
+                            <div class="info-value pe-2">{{info.sales}} TZS</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-calendar-days me-2"></i>Expiry date
+                            </div>
+                            <div class="info-value pe-2">{{info.expiry_date}}</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-comment me-2"></i>Comment
+                            </div>
+                            <div class="comment-section">
+                                <p class="comment-text" id="comment">{{info.comment|linebreaksbr}}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <button class="btn action-btn btn-qty btn-ripple w-100 btn-pulse" id="qtyBtn" data-bs-toggle="modal" data-bs-target="#new_qty_modal">
+                                    <i class="fas fa-pen-to-square me-2"></i>Qty
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn action-btn btn-update btn-ripple w-100 btn-pulse" id="updateBtn" data-bs-toggle="offcanvas" data-bs-target="#update_product_canvas">
+                                    <i class="fas fa-pen-to-square me-2"></i>Update
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn action-btn btn-block btn-ripple w-100" id="item_blockbtn">
+                                  {% if info.active == 'yes' %}
+                                    <i class="fas fa-ban me-2"></i>Block
+                                  {% else %}
+                                  <i class="fas fa-clipboard-check me-2"></i>Unblock
+                                  {% endif %}
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn action-btn btn-delete btn-ripple w-100" id="deleteBtn" data-bs-toggle="modal" data-bs-target="#confirm_delete_modal">
+                                    <i class="fas fa-trash me-2"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-start" id="update_product_canvas">
+      <div class="offcanvas-header bg-charcoal">
+        <h6 class="offcanvas-title text-white">Update product info..</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body bg-background">
+        <form class="d-block w-100 float-start" id="new_product_form" action="{% url 'product_actions' %}" autocomplete="off">
+          <div class="formsms w-100 float-start my-1 text-start"></div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <select name="shop" id="item_shop" class="form-select" required>
+              <option value="">Select shop</option>
+              {% for shop in info.shops_list %}
+                {% if shop.id == info.shop.id %}
+                <option value="{{ shop.id }}" selected>{{ shop.abbrev }}</option>
+                {% else %}
+                <option value="{{ shop.id }}">{{ shop.abbrev }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <label for="item_shop" class="form-label">Select shop</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" id="item_name" name="name" value="{{info.name}}" placeholder="a" required />
+            <label for="item_name" class="form-label">Product name</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="number" step="0.1" class="form-control" id="item_qty" name="qty" value="{{info.qty}}" placeholder="a" required />
+            <label for="item_qty" class="form-label">Quantity</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="number" step="0.1" class="form-control" id="item_cost" name="cost" value="{{info.cost}}" placeholder="a" required />
+            <label for="item_cost" class="form-label">Buying price</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="number" step="0.1" class="form-control" id="item_price" name="price" value="{{info.price}}" placeholder="a" required />
+            <label for="item_price" class="form-label">Selling price</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="date" min="{% now 'Y-m-d' %}" class="form-control" id="item_expiry" name="expiry_date" value="{{info.expiry|date:'Y-m-d'}}" placeholder="a" />
+            <label for="item_expiry" class="form-label">Expiry date</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <textarea class="form-control" id="item_comment" placeholder="d" style="min-height:150px;" name="comment">{{info.comment}}</textarea>
+            <label for="item_comment" class="form-label">Extra comment (optional)</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-3 text-end">
+            <button type="button" class="btn btn-danger d-inline-block me-2" id="item_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-success d-inline-block" id="item_submit_btn">Save</button>
+          </div>
+          <input type="hidden" name="edit_product" value="{{ info.id }}" id="get_product_id" />
+        </form>
+      </div>
+    </div>
+
+    <div class="modal fade" id="new_qty_modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-charcoal">
+            <h6 class="modal-title text-white"><i class="fas fa-circle-check"></i> &nbsp; Add new qty..</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="formsms d-block float-start w-100 text-start"></div>
+            <div class="form-floating d-block w-100 float-start my-1">
+                <input type="text" class="form-control" id="item_up_qty" value="{{info.qty}}" placeholder="a" disabled />
+                <label for="item_up_qty" class="form-label">Current qty in stock</label>
+            </div>
+            <div class="form-floating d-block w-100 float-start my-1">
+                <input type="number" step="0.1" min="1" class="form-control" id="item_new_qty" name="qty" placeholder="a" required />
+                <label for="item_new_qty" class="form-label">New additional qty</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-charcoal" data-bs-dismiss="modal" id="newqty_cancelbtn"><i class="fas fa-left-long"></i> Back</button>
+            <button type="button" class="btn btn-success" id="newqty_addbtn"><i class="fas fa-check-circle"></i> Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="confirm_delete_modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-charcoal">
+            <h6 class="modal-title text-white"><i class="fas fa-triangle-exclamation"></i> &nbsp; Delete item..</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="formsms d-block float-start w-100 text-start"></div>
+            <div class="form-floating d-block w-100 float-start fs-6 py-3 my-1">Are you sure you want to delete this item/product..?</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="cancel_delete_btn"><i class="fas fa-times-circle"></i> No</button>
+            <button type="button" class="btn btn-danger" id="confirm_delete_btn"><i class="fas fa-check-circle"></i> Yes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="search-box input-group w-100 float-start">
+      <input type="text" class="form-control" id="products_search" placeholder="Search.." autocomplete="off" />
+      <button type="button" class="btn btn-primary text-white ms-1" id="products_filter_clear" title="Clear filters"><i class="fas fa-refresh"></i></button>
+      <button type="button" class="btn btn-charcoal text-white ms-1" title="Add new product" data-bs-toggle="offcanvas" data-bs-target="#new_product_canvas"><i class="fas fa-plus-circle"></i></button>
+    </div>
+
+    <div class="offcanvas offcanvas-start" id="new_product_canvas">
+      <div class="offcanvas-header bg-charcoal py-4">
+        <h5 class="offcanvas-title text-white">Add new shop item/product..</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body bg-background">
+        <form class="d-block w-100 float-start" id="new_product_form" action="{% url 'product_actions' %}" autocomplete="off">
+          <div class="formsms w-100 float-start my-1 text-start"></div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <select name="shop" id="item_shop" class="form-select" required>
+              <option value="">Select shop</option>
+              {% for shop in shops %}
+                <option value="{{ shop.id }}">{{ shop.abbrev }}</option>
+              {% endfor %}
+            </select>
+            <label for="item_shop" class="form-label">Select shop</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="text" class="form-control" id="item_name" name="name" placeholder="a" required />
+            <label for="item_name" class="form-label">Product name</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="number" step="0.01" class="form-control" id="item_qty" name="qty" placeholder="a" required />
+            <label for="item_qty" class="form-label">Quantity</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="number" step="0.01" class="form-control" id="item_cost" name="cost" placeholder="a" required />
+            <label for="item_cost" class="form-label">Buying price</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="number" step="0.01" class="form-control" id="item_price" name="price" placeholder="a" required />
+            <label for="item_price" class="form-label">Selling price</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <input type="date" min="{% now 'Y-m-d' %}" class="form-control" id="item_expiry" name="expiry_date" placeholder="a" />
+            <label for="item_expiry" class="form-label">Expiry date</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-1">
+            <textarea class="form-control" id="item_comment" placeholder="d" style="min-height:150px;" name="comment"></textarea>
+            <label for="item_comment" class="form-label">Extra comment (optional)</label>
+          </div>
+          <div class="form-floating d-block w-100 float-start my-3 text-end">
+            <button type="button" class="btn btn-danger d-inline-block me-2" id="item_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-success d-inline-block" id="item_submit_btn">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <div class="table-container" id="table_container">
+      <div class="table-responsive">
+        <table class="table" id="products_table">
+          <thead>
+            <tr>
+              <th>S/N</th>
+              <th>itemname</th>
+              <th>shop</th>
+              <th>stock</th>
+              <th>cost</th>
+              <th>price</th>
+              <th>status</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal fade" id="date_filter_modal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-secondary">
+            <h6 class="modal-title text-white">Select range of reg. dates..</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-floating d-block w-100 float-start my-1">
+              <input type="date" class="form-control text-charcoal" id="min_date" placeholder="d" />
+              <label for="min_date" class="text-charcoal">Start date</label>
+            </div>
+            <div class="form-floating d-block w-100 float-start my-1">
+              <input type="date" class="form-control text-charcoal" id="max_date" placeholder="d" />
+              <label for="max_date" class="text-charcoal">End date</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-long-arrow-left"></i></button>
+            <button type="button" class="btn btn-primary text-white" id="date_clear"><i class="fas fa-refresh"></i></button>
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="date_filter_btn"><i class="fas fa-check-circle"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" value="{% url 'products_page' %}" id="products_list_url" />
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'datatables/datatables.min.js' %}"></script>
+  <script src="{% static 'js/shops/products.js' %}"></script>
+{% endblock %}
