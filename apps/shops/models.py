@@ -31,7 +31,7 @@ class Shop(models.Model):
         ordering = ['names']
 
     def __str__(self):
-        return self.names
+        return self.abbrev
 
 # shop item model
 class Product(models.Model):
@@ -55,4 +55,46 @@ class Product(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.shop.name})"
+
+
+# Cart model
+class Cart(models.Model):
+    id = models.AutoField(primary_key=True)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='cart_items')
+    qty = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantity")
+    user = models.ForeignKey('users.CustomUser', on_delete=models.PROTECT, related_name='cart_users')
+
+    class Meta:
+        verbose_name = "Cart"
+        verbose_name_plural = "Carts"
+        ordering = ['-qty']
+    
+    def __str__(self):
+        return str(self.product)
+    
+
+# Sales model
+class Sales(models.Model):
+    id = models.AutoField(primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey('users.CustomUser', on_delete=models.PROTECT, related_name='sales_user')
+    shop = models.ForeignKey(Shop, on_delete=models.PROTECT, related_name='shop_sale')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Sale amount")
+    customer = models.CharField(max_length=255, default='n/a', verbose_name="Customer name")
+    comment = models.TextField(null=True, blank=True, default=None)
+    
+    def __str__(self):
+        return str(self.amount)
+
+
+# Sales_items model
+class Sale_items(models.Model):
+    id = models.AutoField(primary_key=True)
+    sale = models.ForeignKey(Sales, on_delete=models.PROTECT, related_name='sales')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='sale_product')
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Item price")
+    qty = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Item qty")
+    
+    def __str__(self):
+        return str(self.product)
 

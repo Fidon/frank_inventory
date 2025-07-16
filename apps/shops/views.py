@@ -3,7 +3,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_GET
 from django.http import JsonResponse
 from .forms import ShopForm, ShopUpdateForm, ProductForm, ProductUpdateForm
-from .models import Shop, Product
+from .models import Shop, Product, Cart, Sales, Sale_items
 from apps.users.models import CustomUser
 import zoneinfo
 from dateutil.parser import parse
@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from utils.util_functions import admin_required, conv_timezone, filter_items, format_number
 from decimal import Decimal
 from django.db.models import Sum, F
+from datetime import date
 
 
 # method to add new shop
@@ -309,8 +310,10 @@ def products_page(request):
             if item.qty > 0:
                 if item.is_hidden:
                     product_status = "Blocked"
-                else:
+                elif not item.is_hidden:
                     product_status = "Active"
+                elif item.expiry_date is not None and item.expiry_date <= date.today():
+                    product_status = "Expired"
 
             item_data = {
                 'id': item.id,
@@ -465,7 +468,7 @@ def products_requests(request):
                 fdback = {'success': False, 'sms': 'Failed to delete product.'}
 
     except Exception as e:
-        print(f"products/items error: {e}")
+        return JsonResponse({'success': False, 'sms': 'Unknown error, reload & try again'})
 
     return JsonResponse(fdback)
 
@@ -484,8 +487,10 @@ def product_details(request, itemid):
     if product.qty > 0:
         if product.is_hidden:
             product_status = "Blocked"
-        else:
+        elif not product.is_hidden:
             product_status = "Available"
+        elif product.expiry_date is not None and product.expiry_date <= date.today():
+            product_status = "Expired"
 
     product_data = {
         'id': product.id,
@@ -509,4 +514,524 @@ def product_details(request, itemid):
     }
     return render(request, 'shops/products.html', {'productinfo': True, 'info': product_data})
 
+
+@never_cache
+@login_required
+def sales_page(request):
+    if request.method == 'POST':
+        draw = int(request.POST.get('draw', 0))
+        start = int(request.POST.get('start', 0))
+        length = int(request.POST.get('length', 10))
+        search_value = request.POST.get('search[value]', '')
+        order_column_index = int(request.POST.get('order[0][column]', 0))
+        order_dir = request.POST.get('order[0][dir]', 'asc')
+
+        # Base queryset
+        queryset = Product.objects.filter(is_deleted=False, is_hidden=False)
+        if not request.user.is_admin:
+            queryset = queryset.filter(shop=request.user.shop)
+
+        # Base data from queryset
+        base_data = []
+        for product in queryset:
+            if product.expiry_date is None or (product.expiry_date is not None and product.expiry_date > date.today()):
+                cart_count = 0
+                if Cart.objects.filter(user=request.user, product=product).exists():
+                    cart_item = Cart.objects.filter(user=request.user, product=product).first()
+                    cart_count = cart_item.qty
+
+                product_object = {
+                    'id': product.id,
+                    'name': product.name,
+                    'qty': product.qty,
+                    'price': product.price,
+                    'cart': cart_count
+                }
+                base_data.append(product_object)
+
+        
+        # Total records before filtering
+        total_records = len(base_data)
+
+        # Define a mapping from DataTables column index to the corresponding model field
+        column_mapping = {
+            0: 'id',
+            1: 'name',
+            2: 'qty',
+            3: 'price',
+        }
+
+        # Apply sorting
+        order_column_name = column_mapping.get(order_column_index, 'name')
+        if order_dir == 'asc':
+            base_data = sorted(base_data, key=lambda x: x[order_column_name], reverse=False)
+        else:
+            base_data = sorted(base_data, key=lambda x: x[order_column_name], reverse=True)
+
+        column_filter_types = {
+            'qty': 'numeric',
+            'price': 'numeric',
+        }
+
+        # Apply individual column filtering
+        for i in range(len(column_mapping)):
+            column_search = request.POST.get(f'columns[{i}][search][value]', '')
+            if column_search:
+                column_field = column_mapping.get(i)
+                if column_field:
+                    filter_type = column_filter_types.get(column_field, 'contains')
+                    base_data = [item for item in base_data if filter_items(column_field, column_search, item, filter_type)]
+
+        # Apply global search
+        if search_value:
+            base_data = [item for item in base_data if any(str(value).lower().find(search_value.lower()) != -1 for value in item.values())]
+
+        # Calculate the total number of records after filtering
+        records_filtered = len(base_data)
+
+        # Apply pagination
+        if length < 0:
+            length = len(base_data)
+        base_data = base_data[start:start + length]
+
+        # Calculate row_count based on current page and length
+        page_number = start // length + 1
+        row_count_start = (page_number - 1) * length + 1
+
+
+        # Final data to be returned to ajax call
+        final_data = []
+        for i, item in enumerate(base_data):
+            final_data.append({
+                'count': row_count_start + i,
+                'id': item.get('id'),
+                'name': item.get('name'),
+                'qty': format_number(item.get('qty')),
+                'price': format_number(item.get('price')) + " TZS",
+                'sell_qty': format_number(item.get('qty')),
+                'cart': format_number(item.get('cart')),
+                'action': '',
+            })
+
+        ajax_response = {
+            'draw': draw,
+            'recordsTotal': total_records,
+            'recordsFiltered': records_filtered,
+            'data': final_data,
+        }
+        return JsonResponse(ajax_response)
+    
+    cart = Cart.objects.filter(user=request.user).order_by('id')
+    grand_total, cart_items = sum(item.product.price * item.qty for item in cart), []
+
+    for item in cart:
+        cart_items.append({
+            'id': item.id,
+            'name': item.product.name,
+            'price': f"TZS. {format_number(item.product.price)}",
+            'qty': format_number(item.qty),
+            'max_qty': item.product.qty
+        })
+
+    context = {
+        'cart_label': str(cart.count()) if cart.count() < 10 else '9+',
+        'cart_count': cart.count(),
+        'cart_items': cart_items,
+        'total': f"TZS. {format_number(grand_total)}"
+    }
+    return render(request, 'shops/sales.html', context)
+
+
+@never_cache
+@login_required
+@require_POST
+def sales_actions(request):
+    try:
+        add_to_cart = request.POST.get('cart_add')
+        cart_delete = request.POST.get('cart_delete')
+        clear_cart = request.POST.get('clear_cart')
+        checkout = request.POST.get('checkout')
+        sales_paid = request.POST.get('sales_paid')
+        item_remove = request.POST.get('item_remove')
+        sales_delete = request.POST.get('sales_delete')
+
+        if add_to_cart:
+            product_id = request.POST.get('product')
+            product_qty = Decimal(request.POST.get('qty'))
+            product = Product.objects.get(id=product_id)
+
+            if product_qty > product.qty:
+                return JsonResponse({'success': False, 'sms': f'Qty exceeded available stock ({product.qty}).'})
+            
+            cart_item, created = Cart.objects.get_or_create(product=product, user=request.user, defaults={'qty': product_qty})
+            
+            cart_count = Cart.objects.filter(user=request.user).count()
+            cart_count = cart_count if cart_count < 10 else '9+'
+
+            return JsonResponse({'success': True, 'sms': f'{format_number(product_qty)} items added to cart.', 'cart': cart_count})
+        
+        elif cart_delete:
+            Cart.objects.get(id=cart_delete).delete()
+
+            items_remaining = Cart.objects.filter(user=request.user)
+            cart_count = items_remaining.count() if items_remaining.count() < 10 else '9+'
+            
+            grand_total = sum(item.product.price * item.qty for item in items_remaining)
+
+            return JsonResponse({'success': True, 'cart': cart_count, 'grand_total': "TZS. " + format_number(grand_total)})
+
+        elif clear_cart:
+            Cart.objects.filter(user=request.user).delete()
+            return JsonResponse({'success': True})
+        
+        elif checkout:
+            customer_names = request.POST.get('customer').strip()
+            sale_comment = request.POST.get('comment').strip()
+            full_cart = Cart.objects.filter(user=request.user)
+
+            grand_amount, qty_status, qty_products = 0, True, []
+
+            cart_shops = set()
+            for item in full_cart:
+                grand_amount += item.product.price * item.qty
+                cart_shops.add(item.product.shop)
+
+                if item.qty > item.product.qty:
+                    qty_status = False
+                    qty_products.append(item.product.names)
+
+            if len(cart_shops) > 1:
+                return JsonResponse({'success': False, 'sms': 'All products must be from the same shop to checkout.'})
+
+            if not qty_status:
+                return JsonResponse({'success': False, 'sms': f'Not enough stock for: {", ".join(qty_products)}'})
+
+            # Proceed with checkout
+            sale_transaction = Sales.objects.create(
+                user=request.user,
+                amount=grand_amount,
+                customer='n/a' if customer_names == '' else customer_names,
+                comment=None if sale_comment == '' else sale_comment,
+                shop=list(cart_shops)[0]
+            )
+
+            for item in full_cart:
+                Sale_items.objects.create(
+                    sale=sale_transaction,
+                    product=item.product,
+                    price=item.product.price,
+                    qty=item.qty
+                )
+                item.product.qty -= item.qty
+                item.product.save()
+                item.delete()
+
+            return JsonResponse({'success': True, 'sms': 'Checkout completed successfully!'})
+
+        elif item_remove:
+            item = Sale_items.objects.get(id=item_remove)
+            sale_obj = Sales.objects.get(id=item.sale_id)
+            product = Product.objects.get(id=item.product_id)
+            product.qty = product.qty + item.qty
+            sale_obj.amount = sale_obj.amount - (item.price * item.qty)
+            sale_obj.save()
+            product.save()
+            item.delete()
+            if not Sale_items.objects.filter(sale=sale_obj).exists():
+                sale_obj.delete()
+                return JsonResponse({'success': True, 'sales_page': reverse('sales_report'), 'items': 0})
+            return JsonResponse({'success': True, 'sms': 'Item removed successfully.', 'items': 1})
+
+        elif sales_delete:
+            sale_obj = Sales.objects.get(id=sales_delete)
+            get_items = Sale_items.objects.filter(sale=sale_obj)
+            for obj in get_items:
+                product = Product.objects.get(id=obj.product_id)
+                product.qty = product.qty + obj.qty
+                product.save()
+                obj.delete()
+            sale_obj.delete()
+            return JsonResponse({'success': True, 'sales_page': reverse('sales_page')})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'sms': 'Unknown error, reload & try again'})
+
+
+# Sales report page
+@never_cache
+@login_required
+def sales_report(request):
+    if request.method == 'POST':
+        draw = int(request.POST.get('draw', 0))
+        start = int(request.POST.get('start', 0))
+        length = int(request.POST.get('length', 10))
+        search_value = request.POST.get('search[value]', '')
+        order_column_index = int(request.POST.get('order[0][column]', 0))
+        order_dir = request.POST.get('order[0][dir]', 'asc')
+
+        queryset = Sales.objects.filter(shop=request.user.shop)
+        if request.user.is_admin:
+            queryset = Sales.objects.all()
+
+        # Date range filtering
+        start_date_str = request.POST.get('startdate')
+        end_date_str = request.POST.get('enddate')
+        parsed_start_date = None
+        parsed_end_date = None
+
+        if start_date_str:
+            parsed_start_date = parse(start_date_str).astimezone(zoneinfo.ZoneInfo("UTC"))
+
+        if end_date_str:
+            parsed_end_date = parse(end_date_str).astimezone(zoneinfo.ZoneInfo("UTC"))
+
+        if parsed_start_date and parsed_end_date:
+            queryset = queryset.filter(created_at__range=(parsed_start_date, parsed_end_date))
+        elif parsed_start_date:
+            queryset = queryset.filter(created_at__gte=parsed_start_date)
+        elif parsed_end_date:
+            queryset = queryset.filter(created_at__lte=parsed_end_date)
+
+        # Base data from queryset
+        base_data, grand_total = [], 0
+        for sale in queryset:
+            grand_total += sale.amount
+            sale_items = Sale_items.objects.filter(sale=sale)
+            sales_data = [
+                {
+                    'count': idx + 1,
+                    'names': item.product.name,
+                    'price': format_number(item.price)+" TZS",
+                    'qty': format_number(item.qty),
+                    'total': format_number(item.price * item.qty)+" TZS"
+                }
+                for idx, item in enumerate(sale_items)
+            ]
+
+            sale_object = {
+                'id': sale.id,
+                'saledate': sale.created_at,
+                'shop': sale.shop.abbrev,
+                'user': sale.user.username,
+                'customer': sale.customer,
+                'amount': sale.amount,
+                'sale_items': sales_data,
+            }
+            
+            base_data.append(sale_object)
+
+        
+        # Total records before filtering
+        total_records = len(base_data)
+
+        # Define a mapping from DataTables column index to the corresponding model field
+        column_mapping = {
+            0: 'sale_items',
+            1: 'id',
+            2: 'saledate',
+            3: 'shop',
+            4: 'amount',
+            5: 'customer',
+            6: 'user',
+        }
+
+        # Apply sorting
+        order_column_name = column_mapping.get(order_column_index, 'created_at')
+        def none_safe_sort(item):
+            value = item.get(order_column_name)
+            return (value is None, value)
+        if order_dir == 'asc':
+            base_data = sorted(base_data, key=none_safe_sort, reverse=False)
+        else:
+            base_data = sorted(base_data, key=none_safe_sort, reverse=True)
+
+        column_filter_types = {
+            'shop': 'exact',
+            'amount': 'numeric',
+        }
+
+        # Apply individual column filtering
+        for i in range(len(column_mapping)):
+            column_search = request.POST.get(f'columns[{i}][search][value]', '')
+            if column_search:
+                column_field = column_mapping.get(i)
+                if column_field:
+                    filter_type = column_filter_types.get(column_field, 'contains')
+                    base_data = [item for item in base_data if filter_items(column_field, column_search, item, filter_type)]
+
+        # Apply global search
+        if search_value:
+            base_data = [item for item in base_data if any(str(value).lower().find(search_value.lower()) != -1 for value in item.values())]
+
+        # Calculate the total number of records after filtering
+        records_filtered = len(base_data)
+
+        # Apply pagination
+        if length < 0:
+            length = len(base_data)
+        base_data = base_data[start:start + length]
+
+        # Calculate row_count based on current page and length
+        page_number = start // length + 1
+        row_count_start = (page_number - 1) * length + 1
+
+
+        final_data = []
+        for i, item in enumerate(base_data):
+            final_data.append({
+                'count': row_count_start + i,
+                'id': item.get('id'),
+                'saledate': conv_timezone(item.get('saledate'), '%d-%b-%Y %H:%M:%S'),
+                'shop': item.get('shop'),
+                'user': item.get('user'),
+                'customer': item.get('customer'),
+                'amount': format_number(item.get('amount'))+" TZS",
+                'items': item.get('sale_items'),
+            })
+
+        ajax_response = {
+            'draw': draw,
+            'recordsTotal': total_records,
+            'recordsFiltered': records_filtered,
+            'data': final_data,
+            'grand_total': format_number(grand_total)+" TZS",
+        }
+        return JsonResponse(ajax_response)
+    shops = Shop.objects.all().order_by('-created_at')
+    return render(request, 'shops/sales_report.html', {'shops':shops})
+
+
+# Sale items report
+@never_cache
+@login_required
+def sales_items_report(request):
+    if request.method == 'POST':
+        draw = int(request.POST.get('draw', 0))
+        start = int(request.POST.get('start', 0))
+        length = int(request.POST.get('length', 10))
+        search_value = request.POST.get('search[value]', '')
+        order_column_index = int(request.POST.get('order[0][column]', 0))
+        order_dir = request.POST.get('order[0][dir]', 'asc')
+
+        queryset = Sale_items.objects.filter(sale__shop=request.user.shop)
+        if request.user.is_admin:
+            queryset = Sale_items.objects.all()
+
+        # Date range filtering
+        start_date_str = request.POST.get('startdate')
+        end_date_str = request.POST.get('enddate')
+        parsed_start_date = None
+        parsed_end_date = None
+
+        if start_date_str:
+            parsed_start_date = parse(start_date_str).astimezone(zoneinfo.ZoneInfo("UTC"))
+
+        if end_date_str:
+            parsed_end_date = parse(end_date_str).astimezone(zoneinfo.ZoneInfo("UTC"))
+
+        if parsed_start_date and parsed_end_date:
+            queryset = queryset.filter(sale__created_at__range=(parsed_start_date, parsed_end_date))
+        elif parsed_start_date:
+            queryset = queryset.filter(sale__created_at__gte=parsed_start_date)
+        elif parsed_end_date:
+            queryset = queryset.filter(sale__created_at__lte=parsed_end_date)
+
+        # Base data from queryset
+        base_data, sales_total = [], 0
+        for item in queryset:
+            sales_total += item.price * item.qty
+
+            sale_object = {
+                'id': item.id,
+                'saledate': item.sale.created_at,
+                'shop': item.sale.shop.abbrev,
+                'product': item.product.name,
+                'price': item.price,
+                'qty': item.qty,
+                'amount': item.price * item.qty,
+                'user': item.sale.user.username,
+            }
+            base_data.append(sale_object)
+
+        
+        # Total records before filtering
+        total_records = len(base_data)
+
+        # Define a mapping from DataTables column index to the corresponding model field
+        column_mapping = {
+            0: 'id',
+            1: 'saledate',
+            2: 'shop',
+            3: 'product',
+            4: 'price',
+            5: 'qty',
+            6: 'amount',
+            7: 'user'
+        }
+
+        # Apply sorting
+        order_column_name = column_mapping.get(order_column_index, 'sale__created_at')
+        if order_dir == 'asc':
+            base_data = sorted(base_data, key=lambda x: x[order_column_name], reverse=False)
+        else:
+            base_data = sorted(base_data, key=lambda x: x[order_column_name], reverse=True)
+
+        column_filter_types = {
+            'shop': 'exact',
+            'amount': 'numeric',
+            'price': 'numeric',
+            'qty': 'numeric',
+        }
+
+        # Apply individual column filtering
+        for i in range(len(column_mapping)):
+            column_search = request.POST.get(f'columns[{i}][search][value]', '')
+            if column_search:
+                column_field = column_mapping.get(i)
+                if column_field:
+                    filter_type = column_filter_types.get(column_field, 'contains')
+                    base_data = [item for item in base_data if filter_items(column_field, column_search, item, filter_type)]
+
+        # Apply global search
+        if search_value:
+            base_data = [item for item in base_data if any(str(value).lower().find(search_value.lower()) != -1 for value in item.values())]
+
+        # Calculate the total number of records after filtering
+        records_filtered = len(base_data)
+
+        # Apply pagination
+        if length < 0:
+            length = len(base_data)
+        base_data = base_data[start:start + length]
+
+        # Calculate row_count based on current page and length
+        page_number = start // length + 1
+        row_count_start = (page_number - 1) * length + 1
+
+
+        final_data = []
+        for i, item in enumerate(base_data):
+            final_data.append({
+                'count': row_count_start + i,
+                'id': item.get('id'),
+                'saledate': conv_timezone(item.get('saledate'), '%d-%b-%Y %H:%M:%S'),
+                'shop': item.get('shop'),
+                'product': item.get('product'),
+                'price': format_number(item.get('price'))+" TZS",
+                'qty': format_number(item.get('qty')),
+                'amount': format_number(item.get('amount'))+" TZS",
+                'user': item.get('user'),
+            })
+            
+        ajax_response = {
+            'draw': draw,
+            'recordsTotal': total_records,
+            'recordsFiltered': records_filtered,
+            'data': final_data,
+            'grand_total': format_number(sales_total)+" TZS",
+        }
+        return JsonResponse(ajax_response)
+    
+    shops = Shop.objects.all().order_by('-created_at')
+    return render(request, 'shops/items_report.html', {'shops':shops})
 

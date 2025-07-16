@@ -351,25 +351,25 @@
             <li class="nav-item">
                 <a href="{% url 'products_page' %}" class="nav-link store">
                     <i class="fas fa-warehouse"></i>
-                    <span>Store</span>
+                    <span>Stock</span>
                 </a>
             </li>
             {% endif %}
             <li class="nav-item">
-                <a href="#" class="nav-link sales">
-                    <i class="fas fa-chart-line"></i>
+                <a href="{% url 'sales_page' %}" class="nav-link sales">
+                    <i class="fas fa-receipt"></i>
                     <span>Sales</span>
                 </a>
             </li>
             <li class="nav-item nav-dropdown">
-                <a href="#" class="nav-dropdown-toggle">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Sale Reports</span>
+                <a href="#" class="nav-dropdown-toggle" id="sales_toggle">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Sales Reports</span>
                     <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.8rem;"></i>
                 </a>
                 <ul class="nav-dropdown-menu">
-                    <li><a href="#" class="nav-link">Daily Reports</a></li>
-                    <li><a href="#" class="nav-link">Monthly Reports</a></li>
+                    <li><a href="{% url 'sales_report' %}" class="nav-link s_report">Sales</a></li>
+                    <li><a href="{% url 'sale_items_report' %}" class="nav-link s_items">Sale items</a></li>
                 </ul>
             </li>
             <li class="nav-item">

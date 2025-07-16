@@ -16,6 +16,7 @@
   border: 1px solid rgba(255, 107, 53, 0.3);
   position: relative;
   overflow: hidden;
+  display: none;
 }
 
 .welcome-section::before {

@@ -1,0 +1,110 @@
+{% extends 'master.html' %}
+{% load static %}
+{% block title %}
+  Products
+{% endblock %}
+{% block styles %}
+  <link href="{% static 'css/shops/sales.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+{% block contents %}
+  <div class="search-box input-group w-100 float-start">
+    <input type="text" class="form-control" id="products_search" placeholder="Search.." autocomplete="off" />
+    <button type="button" class="btn btn-primary text-white ms-1" id="filters_clear" title="Clear filters"><i class="fas fa-refresh"></i></button>
+  </div>
+  
+  <div class="table-container" id="table_container">
+    <div class="table-responsive">
+      <table class="table" id="sales_table">
+        <thead>
+          <tr>
+            <th>s/n</th>
+            <th>itemname</th>
+            <th>stock</th>
+            <th>price</th>
+            <th>sale_qty</th>
+            <th>action</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
+
+  <button class="cart btn btn-charcoal text-white border border-white" data-bs-toggle="offcanvas" data-bs-target="#cart_offcanvas"><i class="fas fa-cart-shopping"></i> (<span class="badge m-0 p-0" id="cart_items_btn">{{ cart_label }}</span>)</button>
+
+  <div class="offcanvas offcanvas-start" id="cart_offcanvas">
+    <div class="offcanvas-header bg-charcoal py-4">
+      <h5 class="offcanvas-title text-white">Shopping cart..</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body bg-white">
+      <form class="d-block w-100 float-start" id="cart_checkout_form" action="{% url 'sales_actions' %}" autocomplete="off">
+        <div class="formsms w-100 float-start my-1 text-start"></div>
+        <div class="d-block w-100 float-start" id="cart_items_wrapper">
+          {% if cart_count == 0 %}
+            <span class="d-block w-100 text-charcoal py-3 fs-6">Shopping cart is empty..!</span>
+          {% else %}
+            {% for item in cart_items %}
+              <div class="cart shadow-sm rounded-2" id="div_cart_{{ item.id }}">
+                <img src="{% static 'imgs/boxes.png' %}" />
+                <span class="name">{{ item.name }}</span>
+                <div>
+                  <span class="price">{{ item.price }}</span>
+                  <span class="del" id="del_{{ item.id }}"><i class="fas fa-trash-alt"></i></span>
+                  <span class="qty">({{ item.qty }})</span>
+                </div>
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        {% if cart_count > 0 %}
+          <div class="d-block w-100 float-start px-1 mt-3 border-bottom border-charcoal text-start text-charcoal">Customer details</div>
+          <div class="form-floating d-block w-100 float-start mt-1">
+            <input type="text" class="form-control text-charcoal" id="check_customerNames" placeholder="a" />
+            <label for="check_customerNames" class="form-label">Customer name(s)</label>
+          </div>
+          <div class="form-floating d-none w-100 float-start mt-1">
+            <textarea class="form-control text-charcoal" id="check_comment" placeholder="d" style="min-height:120px;"></textarea>
+            <label for="check_comment" class="form-label">Comment(s) if any</label>
+          </div>
+          <div class="cart shadow-sm rounded-2 mt-5">
+            <span class="total_txt">GRAND TOTAL:</span>
+            <span class="total_num" id="grand_total_spn">{{ total }}</span>
+          </div>
+
+          <div class="form-floating w-100 float-start my-1 text-end">
+            <button type="button" class="btn btn-secondary d-inline-block me-2" data-bs-dismiss="offcanvas"><i class="fas fa-long-arrow-left"></i></button>
+            <button type="button" class="btn btn-primary text-white d-inline-block me-2" id="clear_cart_btn">Clear</button>
+            <button type="button" class="btn btn-success d-inline-block" id="checkoutModal_btn">Checkout</button>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <div class="modal fade" id="confirm_checkout_modal">
+    <div class="modal-dialog">
+      <form class="modal-content" id="confirm_sales_form">
+        <div class="modal-header bg-charcoal">
+          <h6 class="modal-title text-white">Confirm checkout..</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="formsms d-block float-start w-100 text-center"></div>
+          <div class="form-floating d-block w-100 float-start text-charcoal fs-6 py-4 my-1">
+            You're about to confirm the sale amount of <b>{{ total }}</b> cash.<br />Continue..?
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="checkout_cancel_btn">Close</button>
+          <button type="button" class="btn btn-success" id="checkout_confirm_btn">Continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <input type="hidden" value="{% url 'sales_page' %}" id="sales_list_url" />
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'datatables/datatables.min.js' %}"></script>
+  <script src="{% static 'js/shops/sales.js' %}"></script>
+{% endblock %}

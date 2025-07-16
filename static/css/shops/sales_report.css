@@ -1,4 +1,4 @@
-.sidebar-nav .nav-link.shops {
+.sidebar-nav .nav-link.s_report {
   background-color: var(--primary-color);
   color: white;
   border-left-color: var(--accent-color);
@@ -18,12 +18,16 @@
   color: var(--text-color);
   transition: all 0.4s ease;
 }
-.offcanvas .form-control {
+.offcanvas .form-control,
+.modal .form-control,
+.offcanvas .form-select {
   transition: all 0.4s ease;
 }
 
 .search-box .form-control:focus,
-.offcanvas .form-control:focus {
+.offcanvas .form-control:focus,
+.modal .form-control:focus,
+.offcanvas .form-select:focus {
   border-color: rgb(255, 107, 53, 0.8);
   outline: none;
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075),
@@ -73,7 +77,7 @@
   color: var(--text-color);
 }
 
-.table .shop-avatar {
+.table .product-avatar {
   width: 35px;
   height: 35px;
   border-radius: 50%;
@@ -90,18 +94,18 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.table .shop-link {
+.table .product-link {
   text-decoration: none;
   color: var(--text-color);
   transition: color 0.2s ease;
 }
 
-.table .shop-link:hover {
+.table .product-link:hover {
   color: var(--primary-color);
   text-decoration: none;
 }
 
-.table .shop-info {
+.table .product-info {
   display: flex;
   align-items: center;
 }
@@ -112,7 +116,7 @@
     padding: 8px;
   }
 
-  .shop-avatar {
+  .product-avatar {
     width: 28px;
     height: 28px;
   }
@@ -165,13 +169,13 @@
   min-width: 100px;
   transition: all 0.5s ease;
 }
-#date_filter_modal input {
-  border: 1px solid rgba(255, 107, 53, 0.6);
+.table-container .table th input,
+.table-container .table th select {
+  width: 120px;
 }
 .table-container .dataTables_length .form-select:focus,
 .table-container .table th input:focus,
-.table-container .table th select:focus,
-#date_filter_modal input:focus {
+.table-container .table th select:focus {
   border-color: #ff6b35;
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075),
     0 0 7px rgba(255, 107, 53, 0.6);
@@ -216,131 +220,4 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* user details */
-.container-fluid .shop-header {
-  background: linear-gradient(135deg, var(--primary-color), #2d3748);
-  color: white;
-  border-radius: 12px 12px 0 0;
-  padding: 1.5rem;
-}
-
-.container-fluid .shop-avatar {
-  width: 80px;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  color: white;
-  margin-bottom: 1rem;
-}
-
-.container-fluid .info-row {
-  padding: 1rem 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.container-fluid .info-row:last-child {
-  border-bottom: none;
-}
-
-.container-fluid .info-label {
-  font-weight: 600;
-  color: var(--secondary-color);
-  margin-bottom: 0.25rem;
-}
-
-.container-fluid .info-value {
-  color: var(--text-color);
-  font-size: 1rem;
-  font-style: italic;
-}
-
-.container-fluid .action-btn {
-  position: relative;
-  overflow: hidden;
-  padding: 0.75rem 1.25rem;
-  border-radius: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 13px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px solid transparent;
-  background: linear-gradient(135deg, transparent, transparent);
-}
-
-.container-fluid .action-btn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.container-fluid .action-btn:hover::before {
-  left: 100%;
-}
-
-.container-fluid .action-btn i {
-  transition: transform 0.3s ease;
-}
-
-.container-fluid .action-btn:hover i {
-  transform: scale(1.1);
-}
-
-.container-fluid .btn-update {
-  background: linear-gradient(135deg, var(--primary-color), #ff8c5a);
-  color: white;
-  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-}
-
-.container-fluid .btn-update:hover {
-  background: linear-gradient(135deg, #e55a2b, #ff6b35);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px #ff6b35;
-  color: white;
-}
-
-.container-fluid .btn-delete {
-  background: linear-gradient(135deg, #dc3545, #e74c3c);
-  color: white;
-  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-}
-
-.container-fluid .btn-delete:hover {
-  background: linear-gradient(135deg, #c82333, #dc3545);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px #dc3545;
-  color: white;
-}
-
-.container-fluid .action-buttons {
-  padding: 1.5rem;
-  background: #fafafa;
-  border-radius: 0 0 12px 12px;
-}
-
-.offcanvas .form-control {
-  transition: all 0.4s ease;
-}
-
-.offcanvas .form-control:focus {
-  border-color: rgb(255, 107, 53, 0.8);
-  outline: none;
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075),
-    0 0 7px rgba(255, 107, 53, 0.6);
 }

@@ -1,0 +1,90 @@
+{% extends 'master.html' %}
+{% load static %}
+{% block title %}
+  Sales report
+{% endblock %}
+{% block styles %}
+  <link href="{% static 'css/shops/sales_report.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+{% block contents %}
+  <div class="search-box input-group w-100 float-start">
+    <input type="text" class="form-control" id="sales_search" placeholder="Search.." autocomplete="off" />
+    <button type="button" class="btn btn-primary text-white ms-1" id="sales_filter_clear" title="Clear filters"><i class="fas fa-refresh"></i></button>
+  </div>
+  
+  <div class="table-container" id="table_container">
+    <div class="table-responsive">
+      <table class="table text-charcoal table-striped" id="reports_table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>S/n</th>
+            <th>SaleDate</th>
+            <th>Shop</th>
+            <th>SaleAmout</th>
+            <th>Customer</th>
+            <th>User</th>
+          </tr>
+        </thead>
+        <tfoot class="text-center text-charcoal">
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>PAGE TOTAL:</th>
+            <th></th>
+            <th></th>
+            <th></th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>GRAND TOTAL:</th>
+            <th></th>
+            <th></th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+    <div class="modal fade" id="date_filter_modal">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-charcoal">
+            <h6 class="modal-title text-white">Sale dates..</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+            <div class="form-floating d-block w-100 float-start my-1">
+                <input type="date" class="form-control" id="min_date" placeholder="d" />
+                <label for="min_date" class="form-label">Minimum date</label>
+            </div>
+            <div class="form-floating d-block w-100 float-start my-1">
+                <input type="date" class="form-control" id="max_date" placeholder="d" />
+                <label for="max_date" class="form-label">Maximum date</label>
+            </div>
+            </div>
+            <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-long-arrow-left"></i></button>
+            <button type="button" class="btn btn-primary text-white" id="date_clear"><i class="fas fa-refresh"></i></button>
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="date_filter_btn"><i class="fas fa-check-circle"></i></button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+  <input type="hidden" value="{% url 'sales_report' %}" id="sales_report_url" />
+  
+  <select class="d-none" id="shops_list">
+    {% for shop in shops %}
+        <option value="{{ shop.id }}">{{ shop.abbrev }}</option>
+    {% endfor %}
+  </select>
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'datatables/datatables.min.js' %}"></script>
+  <script src="{% static 'js/shops/sales_report.js' %}"></script>
+{% endblock %}

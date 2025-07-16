@@ -88,7 +88,7 @@ def authenticate_user(request):
         login(request, user)
         next_url = request.POST.get('next_url', reverse('dashboard_page'))
         response = JsonResponse({'success': True, 'url': next_url})
-        response.set_cookie('username', user.username) 
+        response.set_cookie('name_text', user.username) 
         return response
 
     error_msg = form.errors['__all__'][0]
