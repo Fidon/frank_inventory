@@ -9,7 +9,7 @@
 {% block contents %}
 <div class="welcome-section" id="welcome-section">
     <div class="welcome-text">
-        <h2 id="user_name_txt">Welcome back, Maganga</h2>
+        <h2 id="user_name_txt">{{ request.user.username }}</h2>
         <p id="clock"></p>
     </div>
 </div>

@@ -1,11 +1,4 @@
 $(function () {
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(";").shift();
-    return null;
-  }
-
   const greetingsList = [
     "Niaje,",
     "Mambo vipi?",
@@ -56,9 +49,13 @@ $(function () {
     "Si fresh lakini?",
     "Acha undanda,",
     "Ushatoka town,",
+    "Umechill,",
+    "Umepoa tajiri,",
+    "Ni vibunda tu,",
+    "Matikiti kudondokea,",
   ];
 
-  // Time-based greeting (5 total)
+  // Time-based greeting
   function getTimeBasedGreeting() {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return "Good morning";
@@ -74,8 +71,8 @@ $(function () {
     allGreetings.push(
       `Hope your ${timeGreeting.toLowerCase()} is going well`,
       `${timeGreeting}, ready to go?`,
-      `${timeGreeting}, champ`,
-      `Wishing you a lovely ${timeGreeting.toLowerCase()}`
+      `${timeGreeting} champ,`,
+      `Wishing you a lovely ${timeGreeting.toLowerCase()},`
     ); // total now = 50
     const randomIndex = Math.floor(Math.random() * allGreetings.length);
     return `${allGreetings[randomIndex]} ${username}`;
@@ -106,8 +103,7 @@ $(function () {
   setInterval(timeDisplay, 1000);
 
   timeDisplay();
-  var display_name_txt =
-    getCookie("name_text") == null ? "Buda" : getCookie("name_text");
+  var display_name_txt = $("#user_name_txt").text();
   $("#user_name_txt").text(getRandomGreeting(display_name_txt));
   $("#welcome-section").fadeIn("fast");
 });

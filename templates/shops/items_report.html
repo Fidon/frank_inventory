@@ -5,6 +5,7 @@
 {% endblock %}
 {% block styles %}
   <link href="{% static 'css/shops/items_report.css' %}" rel="stylesheet" type="text/css" />
+  <link href="{% static 'datatables/DataTables-1.13.6/css/dataTables.bootstrap5.css' %}" rel="stylesheet" type="text/css" />
 {% endblock %}
 {% block contents %}
   <div class="search-box input-group w-100 float-start">
@@ -14,7 +15,7 @@
   
   <div class="table-container" id="table_container">
     <div class="table-responsive">
-      <table class="table text-charcoal table-striped" id="items_report">
+      <table class="table text-charcoal table-striped table-hover" id="items_report">
         <thead>
           <tr>
             <th>S/n</th>
@@ -54,23 +55,23 @@
   <div class="modal fade" id="date_filter_modal">
     <div class="modal-dialog">
       <div class="modal-content">
-        <div class="modal-header bg-color2">
-          <h6 class="modal-title text-white">Sale dates..</h6>
+        <div class="modal-header bg-secondary">
+          <h6 class="modal-title text-white">Select range of reg. dates..</h6>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <div class="form-floating d-block w-100 float-start my-1">
-            <input type="date" class="form-control text-color6" id="min_date" placeholder="d" />
-            <label for="min_date" class="text-color6">Minimum date</label>
+            <input type="date" class="form-control text-charcoal" id="min_date" placeholder="d" />
+            <label for="min_date" class="text-charcoal">Start date</label>
           </div>
           <div class="form-floating d-block w-100 float-start my-1">
-            <input type="date" class="form-control text-color6" id="max_date" placeholder="d" />
-            <label for="max_date" class="text-color6">Maximum date</label>
+            <input type="date" class="form-control text-charcoal" id="max_date" placeholder="d" />
+            <label for="max_date" class="text-charcoal">End date</label>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-long-arrow-left"></i></button>
-          <button type="button" class="btn btn-color2 text-white" id="date_clear"><i class="fas fa-refresh"></i></button>
+          <button type="button" class="btn btn-primary text-white" id="date_clear"><i class="fas fa-refresh"></i></button>
           <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="date_filter_btn"><i class="fas fa-check-circle"></i></button>
         </div>
       </div>

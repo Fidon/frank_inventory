@@ -5,6 +5,7 @@
 {% endblock %}
 {% block styles %}
   <link href="{% static 'css/shops/sales.css' %}" rel="stylesheet" type="text/css" />
+  <link href="{% static 'datatables/DataTables-1.13.6/css/dataTables.bootstrap5.css' %}" rel="stylesheet" type="text/css" />
 {% endblock %}
 {% block contents %}
   <div class="search-box input-group w-100 float-start">
@@ -74,7 +75,7 @@
           <div class="form-floating w-100 float-start my-1 text-end">
             <button type="button" class="btn btn-secondary d-inline-block me-2" data-bs-dismiss="offcanvas"><i class="fas fa-long-arrow-left"></i></button>
             <button type="button" class="btn btn-primary text-white d-inline-block me-2" id="clear_cart_btn">Clear</button>
-            <button type="button" class="btn btn-success d-inline-block" id="checkoutModal_btn">Checkout</button>
+            <button type="button" class="btn btn-success d-inline-block" id="checkoutModal_btn" data-bs-toggle="modal" data-bs-target="#confirm_checkout_modal">Checkout</button>
           </div>
         {% endif %}
       </form>
@@ -90,7 +91,7 @@
         </div>
         <div class="modal-body">
           <div class="formsms d-block float-start w-100 text-center"></div>
-          <div class="form-floating d-block w-100 float-start text-charcoal fs-6 py-4 my-1">
+          <div class="form-floating d-block w-100 float-start text-charcoal fs-6 py-4 my-1 text-center">
             You're about to confirm the sale amount of <b>{{ total }}</b> cash.<br />Continue..?
           </div>
         </div>

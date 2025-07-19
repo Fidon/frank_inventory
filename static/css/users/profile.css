@@ -1,10 +1,31 @@
+/* ========================================
+   NAVIGATION STYLES
+   ======================================== */
 .sidebar-nav .nav-link.profile {
   background-color: var(--primary-color);
   color: white;
   border-left-color: var(--accent-color);
 }
 
-/* user details */
+/* ========================================
+   FORM CONTROLS AND FOCUS STATES
+   ======================================== */
+.offcanvas .form-control {
+  transition: all 0.4s ease;
+}
+
+.offcanvas .form-control:focus {
+  border-color: rgba(255, 107, 53, 0.8);
+  outline: none;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 7px rgba(255, 107, 53, 0.6);
+}
+
+/* ========================================
+   USER PROFILE DETAILS STYLES
+   ======================================== */
+
+/* Header section */
 .container-fluid .user-header {
   background: linear-gradient(135deg, var(--primary-color), #2d3748);
   color: white;
@@ -12,6 +33,7 @@
   padding: 1.5rem;
 }
 
+/* Avatar circle */
 .container-fluid .user-avatar {
   width: 80px;
   height: 80px;
@@ -25,6 +47,7 @@
   margin-bottom: 1rem;
 }
 
+/* Information rows */
 .container-fluid .info-row {
   padding: 1rem 0;
   border-bottom: 1px solid #f0f0f0;
@@ -34,6 +57,7 @@
   border-bottom: none;
 }
 
+/* Information labels and values */
 .container-fluid .info-label {
   font-weight: 600;
   color: var(--secondary-color);
@@ -46,6 +70,11 @@
   font-style: italic;
 }
 
+/* ========================================
+   ACTION BUTTONS STYLES
+   ======================================== */
+
+/* Base action button styles */
 .container-fluid .action-btn {
   position: relative;
   overflow: hidden;
@@ -60,6 +89,7 @@
   background: linear-gradient(135deg, transparent, transparent);
 }
 
+/* Shimmer effect for buttons */
 .container-fluid .action-btn::before {
   content: "";
   position: absolute;
@@ -80,6 +110,7 @@
   left: 100%;
 }
 
+/* Button icon animation */
 .container-fluid .action-btn i {
   transition: transform 0.3s ease;
 }
@@ -88,6 +119,7 @@
   transform: scale(1.1);
 }
 
+/* Update button styling */
 .container-fluid .btn-update {
   background: linear-gradient(135deg, var(--primary-color), #ff8c5a);
   color: white;
@@ -97,10 +129,11 @@
 .container-fluid .btn-update:hover {
   background: linear-gradient(135deg, #e55a2b, #ff6b35);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px #ff6b35;
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
   color: white;
 }
 
+/* Reset button styling */
 .container-fluid .btn-reset {
   background: linear-gradient(135deg, var(--secondary-color), #34495e);
   color: white;
@@ -110,23 +143,13 @@
 .container-fluid .btn-reset:hover {
   background: linear-gradient(135deg, #1a252f, #2c3e50);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px #2c3e50;
+  box-shadow: 0 8px 25px rgba(44, 62, 80, 0.4);
   color: white;
 }
 
+/* Action buttons container */
 .container-fluid .action-buttons {
   padding: 1.5rem;
   background: #fafafa;
   border-radius: 0 0 12px 12px;
-}
-
-.offcanvas .form-control {
-  transition: all 0.4s ease;
-}
-
-.offcanvas .form-control:focus {
-  border-color: rgb(255, 107, 53, 0.8);
-  outline: none;
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075),
-    0 0 7px rgba(255, 107, 53, 0.6);
 }

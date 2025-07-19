@@ -1,16 +1,63 @@
-$(function () {
-  $("#sales_toggle").click();
+class ItemsReportManager {
+  constructor() {
+    this.config = {
+      columnIndices: [0, 1, 2, 3, 4, 5, 6, 7],
+      dateCache: { start: null, end: null },
+      csrfToken: this.getCSRFToken(),
+    };
 
-  var CSRF_TOKEN = document
-    .querySelector('meta[name="csrf-token"]')
-    .getAttribute("content");
-  const COLUMN_INDICES = [0, 1, 2, 3, 4, 5, 6, 7];
-  const SHOP_OPTIONS = $("#shops_list option");
-  const DATE_CACHE = { start: null, end: null };
+    this.selectors = {
+      table: "#items_report",
+      saleItemsReportUrl: "#sale_items_report",
+      shopsList: "#shops_list",
+      searchInput: "#items_search",
+      clearFilter: "#items_filter_clear",
+      minDate: "#min_date",
+      maxDate: "#max_date",
+      dateClear: "#date_clear",
+      dateFilterBtn: "#date_filter_btn",
+      salesToggle: "#sales_toggle",
+    };
 
-  function getDateRange() {
-    const minDateStr = $("#min_date").val();
-    const maxDateStr = $("#max_date").val();
+    this.table = null;
+    this.init();
+  }
+
+  /**
+   * Get CSRF token from meta tag
+   */
+  getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute("content") : "";
+  }
+
+  /**
+   * Initialize the application
+   */
+  init() {
+    $(this.selectors.salesToggle).click();
+    this.setupTable();
+    this.setupEventHandlers();
+  }
+
+  /**
+   * Format currency for display
+   */
+  formatCurrency(num) {
+    return (
+      num.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) + " TZS"
+    );
+  }
+
+  /**
+   * Date range management
+   */
+  getDateRange() {
+    const minDateStr = $(this.selectors.minDate).val();
+    const maxDateStr = $(this.selectors.maxDate).val();
 
     try {
       let dtStartUtc = null;
@@ -32,9 +79,8 @@ $(function () {
         dtEndUtc = endDateLocal.toISOString();
       }
 
-      // Cache the results
-      DATE_CACHE.start = dtStartUtc;
-      DATE_CACHE.end = dtEndUtc;
+      this.config.dateCache.start = dtStartUtc;
+      this.config.dateCache.end = dtEndUtc;
 
       return { start: dtStartUtc, end: dtEndUtc };
     } catch (error) {
@@ -43,48 +89,80 @@ $(function () {
     }
   }
 
-  function clearDates() {
-    $("#min_date").val("");
-    $("#max_date").val("");
-    DATE_CACHE.start = null;
-    DATE_CACHE.end = null;
+  /**
+   * Clear date filters
+   */
+  clearDates() {
+    $(this.selectors.minDate).val("");
+    $(this.selectors.maxDate).val("");
+    this.config.dateCache.start = null;
+    this.config.dateCache.end = null;
   }
 
-  function formatCurrency(num) {
-    return (
-      num.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }) + " TZS"
-    );
+  /**
+   * Setup DataTable
+   */
+  setupTable() {
+    $(`${this.selectors.table} thead tr`)
+      .clone(true)
+      .attr("class", "filters")
+      .appendTo(`${this.selectors.table} thead`);
+
+    this.table = $(this.selectors.table).DataTable({
+      fixedHeader: true,
+      processing: true,
+      serverSide: true,
+      ajax: this.getAjaxConfig(),
+      columns: this.getColumnConfig(),
+      order: [[1, "desc"]],
+      paging: true,
+      lengthMenu: [
+        [10, 20, 40, 50, 100, 200],
+        [10, 20, 40, 50, 100, 200],
+      ],
+      pageLength: 10,
+      lengthChange: true,
+      autoWidth: true,
+      searching: true,
+      bInfo: true,
+      bSort: true,
+      orderCellsTop: true,
+      dom: "lBfrtip",
+      columnDefs: this.getColumnDefs(),
+      buttons: this.getButtonConfig(),
+      footerCallback: this.getFooterCallback(),
+      initComplete: () => this.initTableFilters(),
+    });
   }
 
-  $("#items_report thead tr")
-    .clone(true)
-    .attr("class", "filters")
-    .appendTo("#items_report thead");
-
-  var items_report = $("#items_report").DataTable({
-    fixedHeader: true,
-    processing: true,
-    serverSide: true,
-    ajax: {
-      url: $("#sale_items_report").val(),
+  /**
+   * Get AJAX configuration for DataTable
+   */
+  getAjaxConfig() {
+    return {
+      url: $(this.selectors.saleItemsReportUrl).val(),
       type: "POST",
-      data: function (d) {
-        const dateRange = getDateRange();
+      data: (d) => {
+        const dateRange = this.getDateRange();
         d.startdate = dateRange.start;
         d.enddate = dateRange.end;
       },
       dataType: "json",
-      headers: { "X-CSRFToken": CSRF_TOKEN },
-      dataSrc: function (json) {
-        var tableFooter = $("#items_report tfoot");
-        $(tableFooter).find("tr").eq(1).find("th").eq(6).html(json.grand_total);
+      headers: { "X-CSRFToken": this.config.csrfToken },
+      dataSrc: (json) => {
+        $(`${this.selectors.table} tfoot tr:eq(1) th:eq(6)`)
+          .html(json.grand_total)
+          .addClass("text-end pe-3");
         return json.data;
       },
-    },
-    columns: [
+    };
+  }
+
+  /**
+   * Get column configuration
+   */
+  getColumnConfig() {
+    return [
       { data: "count" },
       { data: "saledate" },
       { data: "shop" },
@@ -93,255 +171,267 @@ $(function () {
       { data: "qty" },
       { data: "amount" },
       { data: "user" },
-    ],
-    order: [[2, "desc"]],
-    paging: true,
-    lengthMenu: [
-      [10, 20, 40, 50, 100, 200],
-      [10, 20, 40, 50, 100, 200],
-    ],
-    pageLength: 10,
-    lengthChange: true,
-    autoWidth: true,
-    searching: true,
-    bInfo: true,
-    bSort: true,
-    orderCellsTop: true,
-    dom: "lBfrtip",
-    columnDefs: [
+    ];
+  }
+
+  /**
+   * Get column definitions
+   */
+  getColumnDefs() {
+    return [
       {
         targets: 0,
         orderable: false,
       },
       {
         targets: [3, 7],
-        createdCell: function (cell, cellData, rowData, rowIndex, colIndex) {
-          $(cell).attr("class", "ellipsis text-start");
-        },
+        createdCell: (cell) => $(cell).addClass("ellipsis text-start"),
       },
       {
         targets: [4, 5, 6],
-        createdCell: function (cell, cellData, rowData, rowIndex, colIndex) {
-          $(cell).attr("class", "text-end pe-4");
-        },
+        createdCell: (cell) => $(cell).addClass("text-end pe-4"),
       },
-    ],
-    buttons: [
+    ];
+  }
+
+  /**
+   * Get button configuration for DataTable
+   */
+  getButtonConfig() {
+    const baseConfig = {
+      className: "btn btn-extra text-white",
+      title: "Sales-items-report - FrankApp",
+      exportOptions: { columns: this.config.columnIndices },
+    };
+
+    return [
       {
-        // Copy button
         extend: "copy",
         text: "<i class='fas fa-clone'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Copy",
-        title: "Sales-items-report - FrankApp",
-        exportOptions: {
-          columns: COLUMN_INDICES,
-        },
+        ...baseConfig,
       },
       {
-        // PDF button
         extend: "pdf",
         text: "<i class='fas fa-file-pdf'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Export to PDF",
-        title: "Sales report - FrankApp",
         filename: "sales-items-report",
         orientation: "landscape",
         pageSize: "A4",
         footer: true,
         exportOptions: {
-          columns: COLUMN_INDICES,
+          ...baseConfig.exportOptions,
           search: "applied",
           order: "applied",
         },
-        tableHeader: {
-          alignment: "center",
-        },
-        customize: function (doc) {
-          doc.styles.tableHeader.alignment = "center";
-          doc.styles.tableBodyOdd.alignment = "center";
-          doc.styles.tableBodyEven.alignment = "center";
-          doc.styles.tableHeader.fontSize = 11;
-          doc.defaultStyle.fontSize = 11;
-          doc.content[1].table.widths = Array(
-            doc.content[1].table.body[1].length + 1
-          )
-            .join("*")
-            .split("");
-
-          var body = doc.content[1].table.body;
-          for (i = 1; i < body.length; i++) {
-            doc.content[1].table.body[i][0].margin = [3, 0, 0, 0];
-            doc.content[1].table.body[i][0].alignment = "center";
-            doc.content[1].table.body[i][1].alignment = "center";
-            doc.content[1].table.body[i][2].alignment = "left";
-            doc.content[1].table.body[i][3].alignment = "left";
-            doc.content[1].table.body[i][4].alignment = "right";
-            doc.content[1].table.body[i][4].padding = [0, 10, 0, 0];
-            doc.content[1].table.body[i][5].alignment = "right";
-            doc.content[1].table.body[i][5].padding = [0, 10, 0, 0];
-            doc.content[1].table.body[i][6].alignment = "right";
-            doc.content[1].table.body[i][6].padding = [0, 10, 0, 0];
-            doc.content[1].table.body[i][7].alignment = "left";
-            doc.content[1].table.body[i][7].margin = [0, 0, 3, 0];
-
-            for (let j = 0; j < body[i].length; j++) {
-              body[i][j].style = "vertical-align: middle;";
-            }
-          }
-        },
+        tableHeader: { alignment: "center" },
+        customize: this.customizePDF.bind(this),
+        ...baseConfig,
       },
       {
-        // Export to excel button
         extend: "excel",
         text: "<i class='fas fa-file-excel'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Export to Excel",
-        title: "Sales items report - FrankApp",
-        exportOptions: {
-          columns: COLUMN_INDICES,
-        },
+        ...baseConfig,
       },
       {
-        // Print button
         extend: "print",
         text: "<i class='fas fa-print'></i>",
-        className: "btn btn-extra text-white",
-        title: "Sales items report - FrankApp",
+        titleAttr: "Print",
         orientation: "landscape",
         pageSize: "A4",
-        titleAttr: "Print",
         footer: true,
         exportOptions: {
-          columns: COLUMN_INDICES,
+          ...baseConfig.exportOptions,
           search: "applied",
           order: "applied",
         },
-        tableHeader: {
-          alignment: "center",
-        },
-        customize: function (win) {
-          $(win.document.body).css("font-size", "11pt");
-          $(win.document.body)
-            .find("table")
-            .addClass("compact")
-            .css("font-size", "inherit");
-        },
+        tableHeader: { alignment: "center" },
+        customize: this.customizePrint.bind(this),
+        ...baseConfig,
       },
-    ],
-    footerCallback: function (row, data, start, end, display) {
-      var api = this.api(),
-        data;
+    ];
+  }
 
-      var intVal = function (i) {
-        return typeof i === "string"
+  /**
+   * Customize PDF export
+   */
+  customizePDF(doc) {
+    doc.styles.tableHeader.alignment = "center";
+    doc.styles.tableBodyOdd.alignment = "center";
+    doc.styles.tableBodyEven.alignment = "center";
+    doc.styles.tableHeader.fontSize = 11;
+    doc.defaultStyle.fontSize = 11;
+    doc.content[1].table.widths = Array(doc.content[1].table.body[1].length + 1)
+      .join("*")
+      .split("");
+
+    const body = doc.content[1].table.body;
+    for (let i = 1; i < body.length; i++) {
+      const cellConfigs = [
+        { alignment: "center", margin: [3, 0, 0, 0] },
+        { alignment: "center" },
+        { alignment: "left" },
+        { alignment: "left" },
+        { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "left", margin: [0, 0, 3, 0] },
+      ];
+
+      cellConfigs.forEach((config, j) => {
+        if (body[i][j]) {
+          Object.assign(body[i][j], config);
+          body[i][j].style = "vertical-align: middle;";
+        }
+      });
+    }
+  }
+
+  /**
+   * Customize print output
+   */
+  customizePrint(win) {
+    $(win.document.body).css("font-size", "11pt");
+    $(win.document.body)
+      .find("table")
+      .addClass("compact")
+      .css("font-size", "inherit");
+  }
+
+  /**
+   * Get footer callback for DataTable
+   */
+  getFooterCallback() {
+    return (row, data, start, end, display) => {
+      const api = this.table;
+      const intVal = (i) =>
+        typeof i === "string"
           ? i.replace(/[\s,]/g, "").replace(/TZS/g, "") * 1
           : typeof i === "number"
           ? i
           : 0;
-      };
 
-      var salesTotal = api
+      const salesTotal = api
         .column(6)
         .data()
-        .reduce(function (a, b) {
-          return intVal(a) + intVal(b);
-        }, 0);
+        .reduce((a, b) => intVal(a) + intVal(b), 0);
 
-      var pageTotalValue = formatCurrency(salesTotal);
-      var tableFooter = $(api.table().footer());
+      const pageTotalValue = this.formatCurrency(salesTotal);
+      $(api.table().footer())
+        .find("tr:eq(0) th:eq(6)")
+        .html(pageTotalValue)
+        .addClass("text-end pe-3");
+    };
+  }
 
-      $(tableFooter).find("tr").eq(0).find("th").eq(6).html(pageTotalValue);
-    },
-    initComplete: function () {
-      var api = this.api();
-      api
-        .columns(COLUMN_INDICES)
-        .eq(0)
-        .each(function (colIdx) {
-          var cell = $(".filters th").eq(
-            $(api.column(colIdx).header()).index()
-          );
-          cell.addClass("bg-white");
+  /**
+   * Initialize table filters
+   */
+  initTableFilters() {
+    const api = this.table;
 
-          if (colIdx == 0) {
-            cell.html("");
-          } else if (colIdx == 1) {
-            var calendar = `<button type="button" class="btn btn-sm btn-primary text-white" data-bs-toggle="modal" data-bs-target="#date_filter_modal"><i class="fas fa-calendar-alt"></i></button>`;
-            cell.html(calendar);
-          } else if (colIdx == 2) {
-            var select = document.createElement("select");
-            select.className = "select-filter text-charcoal float-start";
-            select.innerHTML = `<option value="">All</option>`;
-            SHOP_OPTIONS.each(function () {
-              select.innerHTML += `<option value="${$(this).text()}">${$(
-                this
+    api
+      .columns(this.config.columnIndices)
+      .eq(0)
+      .each((colIdx) => {
+        const cell = $(".filters th").eq(
+          $(api.column(colIdx).header()).index()
+        );
+        cell.addClass("bg-white");
+
+        if (colIdx === 0) {
+          cell.html("");
+        } else if (colIdx === 1) {
+          const calendar = `
+            <button type="button" class="btn btn-sm btn-primary text-white" 
+                    data-bs-toggle="modal" data-bs-target="#date_filter_modal">
+              <i class="fas fa-calendar-alt"></i>
+            </button>
+          `;
+          cell.html(calendar);
+        } else if (colIdx === 2) {
+          const select = document.createElement("select");
+          select.className = "select-filter text-charcoal float-start";
+          select.innerHTML = `<option value="">All</option>`;
+          $(this.selectors.shopsList)
+            .find("option")
+            .each((_, opt) => {
+              select.innerHTML += `<option value="${$(opt).text()}">${$(
+                opt
               ).text()}</option>`;
             });
-            cell.html(select);
-            $(select).on("change", function () {
-              api.column(colIdx).search($(this).val()).draw();
-            });
-          } else {
-            $(cell).html(
-              "<input type='text' class='text-color6' placeholder='Filter..'/>"
-            );
-            $(
-              "input",
-              $(".filters th").eq($(api.column(colIdx).header()).index())
-            )
-              .off("keyup change")
-              .on("keyup change", function (e) {
-                e.stopPropagation();
-                $(this).attr("title", $(this).val());
-                var regexr = "{search}";
-                var cursorPosition = this.selectionStart;
-                api
-                  .column(colIdx)
-                  .search(
-                    this.value != ""
-                      ? regexr.replace("{search}", this.value)
-                      : "",
-                    this.value != "",
-                    this.value == ""
-                  )
-                  .draw();
-                $(this)
-                  .focus()[0]
-                  .setSelectionRange(cursorPosition, cursorPosition);
-              });
-          }
-        });
-    },
-  });
+          cell.html(select);
+          $(select).on("change", () =>
+            api.column(colIdx).search($(select).val()).draw()
+          );
+        } else {
+          cell.html(
+            "<input type='text' class='text-color6' placeholder='Filter..'/>"
+          );
+          this.setupColumnFilter(cell, api, colIdx);
+        }
+      });
+  }
 
-  // Event handlers on user search and date filtering
-  $("#items_search")
-    .off("keyup")
-    .on("keyup", function () {
-      items_report.search($(this).val()).draw();
-    });
+  /**
+   * Setup individual column filter
+   */
+  setupColumnFilter(cell, api, colIdx) {
+    const input = $("input", cell);
 
-  $("#items_filter_clear")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      $("#items_search").val("");
-      clearDates();
-      $(".filters input[type='text']").val("");
-      $(".filters select").val("");
-      items_report.columns().search("").draw();
-    });
+    input.off("keyup change").on("keyup change", function (e) {
+      e.stopPropagation();
+      $(this).attr("title", $(this).val());
 
-  $("#date_clear")
-    .off("click")
-    .on("click", function () {
-      clearDates();
-    });
+      const regexr = "{search}";
+      const cursorPosition = this.selectionStart;
 
-  $("#date_filter_btn")
-    .off("click")
-    .on("click", function () {
-      items_report.draw();
+      api
+        .column(colIdx)
+        .search(
+          this.value !== "" ? regexr.replace("{search}", this.value) : "",
+          this.value !== "",
+          this.value === ""
+        )
+        .draw();
+
+      $(this).focus()[0].setSelectionRange(cursorPosition, cursorPosition);
     });
+  }
+
+  /**
+   * Setup all event handlers
+   */
+  setupEventHandlers() {
+    $(this.selectors.searchInput)
+      .off("keyup")
+      .on("keyup", () => {
+        this.table.search($(this.selectors.searchInput).val()).draw();
+      });
+
+    $(this.selectors.clearFilter)
+      .off("click")
+      .on("click", (e) => {
+        e.preventDefault();
+        $(this.selectors.searchInput).val("");
+        this.clearDates();
+        $(".filters input[type='text']").val("");
+        $(".filters select").val("");
+        this.table.search("").columns().search("").draw();
+      });
+
+    $(this.selectors.dateClear)
+      .off("click")
+      .on("click", () => this.clearDates());
+
+    $(this.selectors.dateFilterBtn)
+      .off("click")
+      .on("click", () => this.table.draw());
+  }
+}
+
+// Initialize the application when DOM is ready
+$(function () {
+  new ItemsReportManager();
 });

@@ -1,66 +1,163 @@
-$(function () {
-  const CSRF_TOKEN = document
-    .querySelector('meta[name="csrf-token"]')
-    .getAttribute("content");
-  const COLUMN_INDICES = [0, 1, 2, 3, 4, 5, 6];
-  const DATE_CACHE = { start: null, end: null };
+class ShopsManager {
+  constructor() {
+    this.config = {
+      columnIndices: [0, 1, 2, 3, 4, 5, 6],
+      dateCache: { start: null, end: null },
+      csrfToken: this.getCSRFToken(),
+      deletingState: false,
+    };
 
-  function generate_errorsms(status, sms) {
-    return `<div class="alert alert-${
-      status ? "success" : "danger"
-    } alert-dismissible fade show px-2 m-0 d-block w-100"><i class='fas fa-${status ? "check" : "exclamation"}-circle'></i> ${sms} <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button></div>`;
+    this.selectors = {
+      form: "#new_shop_form",
+      table: "#shops_table",
+      canvas: "#new_shop_canvas",
+      cancelBtn: "#shop_cancel_btn",
+      submitBtn: "#shop_submit_btn",
+      searchInput: "#shops_search",
+      clearFilter: "#shops_filter_clear",
+      minDate: "#min_date",
+      maxDate: "#max_date",
+      dateClear: "#date_clear",
+      dateFilterBtn: "#date_filter_btn",
+      confirmDeleteBtn: "#confirm_delete_btn",
+      cancelDeleteBtn: "#cancel_delete_btn",
+      shopsDiv: "#shop_div",
+      shopsListUrl: "#shops_list_url",
+      shopId: "#get_shop_id",
+      deleteModal: "#confirm_delete_modal",
+    };
+
+    this.table = null;
+    this.init();
   }
 
-  // New shop registration & update
-  $("#new_shop_form").submit(function (e) {
+  /**
+   * Get CSRF token from meta tag
+   */
+  getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute("content") : "";
+  }
+
+  /**
+   * Initialize the application
+   */
+  init() {
+    this.setupFormHandler();
+    this.setupTable();
+    this.setupEventHandlers();
+  }
+
+  /**
+   * Generate alert messages
+   */
+  generateAlert(isSuccess, message) {
+    const alertType = isSuccess ? "success" : "danger";
+    const iconType = isSuccess ? "check" : "exclamation";
+
+    return `
+      <div class="alert alert-${alertType} alert-dismissible fade show px-2 m-0 d-block w-100">
+        <i class='fas fa-${iconType}-circle'></i> ${message}
+        <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button>
+      </div>
+    `;
+  }
+
+  /**
+   * Setup form submission handler
+   */
+  setupFormHandler() {
+    $(this.selectors.form).on("submit", (e) => this.handleFormSubmit(e));
+  }
+
+  /**
+   * Handle form submission
+   */
+  handleFormSubmit(e) {
     e.preventDefault();
+    const form = $(this.selectors.form);
 
     $.ajax({
       type: "POST",
-      url: $(this).attr("action"),
-      data: new FormData($(this)[0]),
+      url: form.attr("action"),
+      data: new FormData(form[0]),
       dataType: "json",
       contentType: false,
       processData: false,
-      headers: {
-        "X-CSRFToken": CSRF_TOKEN,
-      },
-      beforeSend: function () {
-        $("#shop_cancel_btn").removeClass("d-inline-block").addClass("d-none");
-        $("#shop_submit_btn")
-          .html("<i class='fas fa-spinner fa-pulse'></i> Saving")
-          .attr("type", "button");
-      },
-      success: function (response) {
-        $("#shop_cancel_btn").removeClass("d-none").addClass("d-inline-block");
-        $("#shop_submit_btn").text("Save").attr("type", "submit");
-
-        var fdback = generate_errorsms(response.success, response.sms);
-
-        $("#new_shop_canvas .offcanvas-body").animate({ scrollTop: 0 }, "slow");
-        $("#new_shop_form .formsms").html(fdback);
-
-        if (response.update_success) {
-          $("#shop_div").load(location.href + " #shop_div");
-          $("html, body").animate({ scrollTop: 0 }, "slow");
-        } else if (response.success) {
-          $("#new_shop_form")[0].reset();
-          shops_table.draw();
-        }
-      },
-      error: function (xhr, status, error) {
-        $("#shop_cancel_btn").removeClass("d-none").addClass("d-inline-block");
-        $("#shop_submit_btn").text("Save").attr("type", "submit");
-        var fdback = generate_errorsms(false, "Unknown error, reload & try");
-        $("#new_shop_canvas .offcanvas-body").animate({ scrollTop: 0 }, "slow");
-        $("#new_shop_form .formsms").html(fdback);
-      },
+      headers: { "X-CSRFToken": this.config.csrfToken },
+      beforeSend: () => this.setFormLoading(true),
+      success: (response) => this.handleFormSuccess(response),
+      error: () => this.handleFormError(),
     });
-  });
+  }
 
-  function getDateRange() {
-    const minDateStr = $("#min_date").val();
-    const maxDateStr = $("#max_date").val();
+  /**
+   * Set form loading state
+   */
+  setFormLoading(isLoading) {
+    const cancelBtn = $(this.selectors.cancelBtn);
+    const submitBtn = $(this.selectors.submitBtn);
+
+    if (isLoading) {
+      cancelBtn.removeClass("d-inline-block").addClass("d-none");
+      submitBtn
+        .html("<i class='fas fa-spinner fa-pulse'></i> Saving")
+        .attr("type", "button");
+    } else {
+      cancelBtn.removeClass("d-none").addClass("d-inline-block");
+      submitBtn.text("Save").attr("type", "submit");
+    }
+  }
+
+  /**
+   * Handle form success response
+   */
+  handleFormSuccess(response) {
+    this.setFormLoading(false);
+
+    const feedback = this.generateAlert(response.success, response.sms);
+    this.scrollToTop(this.selectors.canvas);
+    $(`${this.selectors.form} .formsms`).html(feedback);
+
+    if (response.update_success) {
+      $(this.selectors.shopsDiv).load(
+        `${location.href} ${this.selectors.shopsDiv}`
+      );
+      this.scrollToTop("html, body");
+    } else if (response.success) {
+      $(this.selectors.form)[0].reset();
+      this.table.draw();
+    }
+  }
+
+  /**
+   * Handle form error
+   */
+  handleFormError() {
+    this.setFormLoading(false);
+
+    const feedback = this.generateAlert(false, "Unknown error, reload & try");
+    this.scrollToTop(this.selectors.canvas);
+    $(`${this.selectors.form} .formsms`).html(feedback);
+  }
+
+  /**
+   * Scroll to top utility
+   */
+  scrollToTop(selector) {
+    if (selector.includes("canvas")) {
+      $(`${selector} .offcanvas-body`).animate({ scrollTop: 0 }, "slow");
+    } else {
+      $(selector).animate({ scrollTop: 0 }, "slow");
+    }
+  }
+
+  /**
+   * Date range management
+   */
+  getDateRange() {
+    const minDateStr = $(this.selectors.minDate).val();
+    const maxDateStr = $(this.selectors.maxDate).val();
 
     try {
       let dtStartUtc = null;
@@ -83,8 +180,8 @@ $(function () {
       }
 
       // Cache the results
-      DATE_CACHE.start = dtStartUtc;
-      DATE_CACHE.end = dtEndUtc;
+      this.config.dateCache.start = dtStartUtc;
+      this.config.dateCache.end = dtEndUtc;
 
       return { start: dtStartUtc, end: dtEndUtc };
     } catch (error) {
@@ -93,35 +190,74 @@ $(function () {
     }
   }
 
-  function clearDates() {
-    $("#min_date").val("");
-    $("#max_date").val("");
-    DATE_CACHE.start = null;
-    DATE_CACHE.end = null;
+  /**
+   * Clear date filters
+   */
+  clearDates() {
+    $(this.selectors.minDate).val("");
+    $(this.selectors.maxDate).val("");
+    this.config.dateCache.start = null;
+    this.config.dateCache.end = null;
   }
 
-  // Shops table initialization
-  $("#shops_table thead tr")
-    .clone(true)
-    .attr("class", "filters")
-    .appendTo("#shops_table thead");
+  /**
+   * Setup DataTable
+   */
+  setupTable() {
+    // Clone header for filters
+    $(`${this.selectors.table} thead tr`)
+      .clone(true)
+      .attr("class", "filters")
+      .appendTo(`${this.selectors.table} thead`);
 
-  var shops_table = $("#shops_table").DataTable({
-    fixedHeader: true,
-    processing: true,
-    serverSide: true,
-    ajax: {
-      url: $("#shops_list_url").val(),
+    this.table = $(this.selectors.table).DataTable({
+      fixedHeader: true,
+      processing: true,
+      serverSide: true,
+      ajax: this.getAjaxConfig(),
+      columns: this.getColumnConfig(),
+      order: [[3, "desc"]],
+      paging: true,
+      lengthMenu: [
+        [10, 20, 40, 50, 100, 200],
+        [10, 20, 40, 50, 100, 200],
+      ],
+      pageLength: 10,
+      lengthChange: true,
+      autoWidth: true,
+      searching: true,
+      bInfo: true,
+      bSort: true,
+      orderCellsTop: true,
+      columnDefs: this.getColumnDefs(),
+      dom: "lBfrtip",
+      buttons: this.getButtonConfig(),
+      initComplete: () => this.initTableFilters(),
+    });
+  }
+
+  /**
+   * Get AJAX configuration for DataTable
+   */
+  getAjaxConfig() {
+    return {
+      url: $(this.selectors.shopsListUrl).val(),
       type: "POST",
-      data: function (d) {
-        const dateRange = getDateRange();
+      data: (d) => {
+        const dateRange = this.getDateRange();
         d.startdate = dateRange.start;
         d.enddate = dateRange.end;
       },
       dataType: "json",
-      headers: { "X-CSRFToken": CSRF_TOKEN },
-    },
-    columns: [
+      headers: { "X-CSRFToken": this.config.csrfToken },
+    };
+  }
+
+  /**
+   * Get column configuration
+   */
+  getColumnConfig() {
+    return [
       { data: "count" },
       { data: "names" },
       { data: "abbrev" },
@@ -129,271 +265,325 @@ $(function () {
       { data: "users_count" },
       { data: "items_count" },
       { data: "networth" },
-    ],
-    order: [[3, "desc"]],
-    paging: true,
-    lengthMenu: [
-      [10, 20, 40, 50, 100, 200],
-      [10, 20, 40, 50, 100, 200],
-    ],
-    pageLength: 10,
-    lengthChange: true,
-    autoWidth: true,
-    searching: true,
-    bInfo: true,
-    bSort: true,
-    orderCellsTop: true,
-    columnDefs: [
+    ];
+  }
+
+  /**
+   * Get column definitions
+   */
+  getColumnDefs() {
+    return [
       {
         targets: 0,
         orderable: false,
       },
       {
         targets: 1,
-        className: "ellipsis text-start",
-        createdCell: function (cell, cellData, rowData, rowIndex, colIndex) {
-          var cell_content =
-            `<a href="${rowData.info}" class="shop-link">` +
-            `<div class="shop-info">` +
-            `<div class="shop-avatar">` +
-            `<i class="fas fa-store"></i></div>` +
-            `<span>${rowData.names}</span></div></a>`;
-          $(cell).html(cell_content);
+        createdCell: (cell, cellData, rowData) => {
+          const cellContent = `
+            <a href="${rowData.info}" class="shop-link">
+              <div class="shop-info">
+                <div class="shop-avatar">
+                  <i class="fas fa-store"></i>
+                </div>
+                <span>${rowData.names}</span>
+              </div>
+            </a>
+          `;
+          $(cell).html(cellContent).addClass("ellipsis text-start");
         },
       },
       {
         targets: 6,
-        className: "text-end pe-3",
+        createdCell: (cell) => $(cell).addClass("text-end pe-3"),
       },
-    ],
-    dom: "lBfrtip",
-    buttons: [
+    ];
+  }
+
+  /**
+   * Get button configuration for DataTable
+   */
+  getButtonConfig() {
+    const baseConfig = {
+      className: "btn btn-extra text-white",
+      title: "Shops - FrankApp",
+      exportOptions: { columns: this.config.columnIndices },
+    };
+
+    return [
       {
-        // Copy button
         extend: "copy",
         text: "<i class='fas fa-clone'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Copy",
-        title: "Shops - FrankApp",
-        exportOptions: {
-          columns: COLUMN_INDICES,
-        },
+        ...baseConfig,
       },
       {
-        // PDF button
         extend: "pdf",
         text: "<i class='fas fa-file-pdf'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Export to PDF",
-        title: "Shops - FrankApp",
         filename: "shops-frankapp",
         orientation: "portrait",
         pageSize: "A4",
         footer: true,
         exportOptions: {
-          columns: COLUMN_INDICES,
+          ...baseConfig.exportOptions,
           search: "applied",
           order: "applied",
         },
-        tableHeader: {
-          alignment: "center",
-        },
-        customize: function (doc) {
-          doc.styles.tableHeader.alignment = "center";
-          doc.styles.tableBodyOdd.alignment = "center";
-          doc.styles.tableBodyEven.alignment = "center";
-          doc.styles.tableHeader.fontSize = 7;
-          doc.defaultStyle.fontSize = 6;
-          doc.content[1].table.widths = Array(
-            doc.content[1].table.body[1].length + 1
-          )
-            .join("*")
-            .split("");
-
-          var body = doc.content[1].table.body;
-          for (i = 1; i < body.length; i++) {
-            doc.content[1].table.body[i][0].margin = [3, 0, 0, 0];
-            doc.content[1].table.body[i][0].alignment = "center";
-            doc.content[1].table.body[i][1].alignment = "left";
-            doc.content[1].table.body[i][2].alignment = "left";
-            doc.content[1].table.body[i][3].alignment = "center";
-            doc.content[1].table.body[i][4].alignment = "center";
-            doc.content[1].table.body[i][5].alignment = "center";
-            doc.content[1].table.body[i][6].alignment = "right";
-            doc.content[1].table.body[i][6].margin = [0, 0, 3, 0];
-
-            for (let j = 0; j < body[i].length; j++) {
-              body[i][j].style = "vertical-align: middle;";
-            }
-          }
-        },
+        tableHeader: { alignment: "center" },
+        customize: this.customizePDF.bind(this),
+        ...baseConfig,
       },
       {
-        // Export to excel button
         extend: "excel",
         text: "<i class='fas fa-file-excel'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Export to Excel",
-        title: "Shops - FrankApp",
-        exportOptions: {
-          columns: COLUMN_INDICES,
-        },
+        ...baseConfig,
       },
       {
-        // Print button
         extend: "print",
         text: "<i class='fas fa-print'></i>",
-        className: "btn btn-extra text-white",
-        title: "Shops - FrankApp",
+        titleAttr: "Print",
         orientation: "portrait",
         pageSize: "A4",
-        titleAttr: "Print",
         footer: true,
         exportOptions: {
-          columns: COLUMN_INDICES,
+          ...baseConfig.exportOptions,
           search: "applied",
           order: "applied",
         },
-        tableHeader: {
-          alignment: "center",
-        },
-        customize: function (win) {
-          $(win.document.body).css("font-size", "11pt");
-          $(win.document.body)
-            .find("table")
-            .addClass("compact")
-            .css("font-size", "inherit");
-        },
+        tableHeader: { alignment: "center" },
+        customize: this.customizePrint.bind(this),
+        ...baseConfig,
       },
-    ],
-    initComplete: function () {
-      var api = this.api();
-      api
-        .columns(COLUMN_INDICES)
-        .eq(0)
-        .each(function (colIdx) {
-          var cell = $(".filters th").eq(
-            $(api.column(colIdx).header()).index()
-          );
-          cell.addClass("bg-white");
+    ];
+  }
 
-          if (colIdx == 0) {
-            $(cell).html("");
-          } else if (colIdx == 3) {
-            var calendar = `<button type="button" class="btn btn-sm btn-primary text-white" data-bs-toggle="modal" data-bs-target="#date_filter_modal"><i class="fas fa-calendar-alt"></i></button>`;
-            cell.html(calendar);
-          } else {
-            $(cell).html(
-              "<input type='text' class='text-charcoal' placeholder='Filter..'/>"
-            );
-            $(
-              "input",
-              $(".filters th").eq($(api.column(colIdx).header()).index())
-            )
-              .off("keyup change")
-              .on("keyup change", function (e) {
-                e.stopPropagation();
-                $(this).attr("title", $(this).val());
-                var regexr = "{search}";
-                var cursorPosition = this.selectionStart;
-                api
-                  .column(colIdx)
-                  .search(
-                    this.value != ""
-                      ? regexr.replace("{search}", this.value)
-                      : "",
-                    this.value != "",
-                    this.value == ""
-                  )
-                  .draw();
-                $(this)
-                  .focus()[0]
-                  .setSelectionRange(cursorPosition, cursorPosition);
-              });
-          }
-        });
-    },
-  });
+  /**
+   * Customize PDF export
+   */
+  customizePDF(doc) {
+    doc.styles.tableHeader.alignment = "center";
+    doc.styles.tableBodyOdd.alignment = "center";
+    doc.styles.tableBodyEven.alignment = "center";
+    doc.styles.tableHeader.fontSize = 7;
+    doc.defaultStyle.fontSize = 6;
+    doc.content[1].table.widths = Array(doc.content[1].table.body[1].length + 1)
+      .join("*")
+      .split("");
 
-  // Event handlers on user search and date filtering
-  $("#shops_search")
-    .off("keyup")
-    .on("keyup", function () {
-      shops_table.search($(this).val()).draw();
-    });
+    const body = doc.content[1].table.body;
+    for (let i = 1; i < body.length; i++) {
+      const row = doc.content[1].table.body[i];
 
-  $("#shops_filter_clear")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      $("#shops_search").val("");
-      clearDates();
-      $(".filters input[type='text']").val("");
-      $(".filters select").val("");
-      shops_table.columns().search("").draw();
-    });
+      // Configure cell alignments and padding
+      const cellConfigs = [
+        { alignment: "center", margin: [3, 0, 0, 0] },
+        { alignment: "left" },
+        { alignment: "left" },
+        { alignment: "center" },
+        { alignment: "center" },
+        { alignment: "center" },
+        { alignment: "right", margin: [0, 0, 3, 0] },
+      ];
 
-  $("#date_clear")
-    .off("click")
-    .on("click", function () {
-      clearDates();
-    });
-
-  $("#date_filter_btn")
-    .off("click")
-    .on("click", function () {
-      shops_table.draw();
-    });
-
-  // Delete confirmation modal
-  var btn_deleting = false;
-  $("#confirm_delete_btn").click(function (e) {
-    e.preventDefault();
-    if (btn_deleting == false) {
-      var formData = new FormData();
-      formData.append("delete_shop", $("#get_shop_id").val());
-
-      $.ajax({
-        type: "POST",
-        url: $("#new_shop_form").attr("action"),
-        data: formData,
-        dataType: "json",
-        contentType: false,
-        processData: false,
-        headers: {
-          "X-CSRFToken": CSRF_TOKEN,
-        },
-        beforeSend: function () {
-          btn_deleting = true;
-          $("#cancel_delete_btn")
-            .removeClass("d-inline-block")
-            .addClass("d-none");
-          $("#confirm_delete_btn").html(
-            "<i class='fas fa-spinner fa-pulse'></i>"
-          );
-        },
-        success: function (response) {
-          btn_deleting = false;
-          if (response.success) {
-            window.alert("The shop has been deleted permanently..!");
-            window.location.href = response.url;
-          } else {
-            $("#cancel_delete_btn")
-              .removeClass("d-none")
-              .addClass("d-inline-block");
-            $("#confirm_delete_btn").html(
-              "<i class='fas fa-check-circle'></i> Yes"
-            );
-
-            var fdback = generate_errorsms(response.success, response.sms);
-
-            $("#confirm_delete_modal .formsms").html(fdback);
-          }
-        },
-        error: function (xhr, status, error) {
-          console.log(error);
-        },
+      cellConfigs.forEach((config, j) => {
+        if (row[j]) {
+          Object.assign(row[j], config);
+          row[j].style = "vertical-align: middle;";
+        }
       });
     }
-  });
+  }
+
+  /**
+   * Customize print output
+   */
+  customizePrint(win) {
+    $(win.document.body).css("font-size", "11pt");
+    $(win.document.body)
+      .find("table")
+      .addClass("compact")
+      .css("font-size", "inherit");
+  }
+
+  /**
+   * Initialize table filters
+   */
+  initTableFilters() {
+    const api = this.table;
+
+    api
+      .columns(this.config.columnIndices)
+      .eq(0)
+      .each((colIdx) => {
+        const cell = $(".filters th").eq(
+          $(api.column(colIdx).header()).index()
+        );
+        cell.addClass("bg-white");
+
+        if (colIdx === 0) {
+          cell.html("");
+        } else if (colIdx === 3) {
+          const calendar = `
+            <button type="button" class="btn btn-sm btn-primary text-white" 
+                    data-bs-toggle="modal" data-bs-target="#date_filter_modal">
+              <i class="fas fa-calendar-alt"></i>
+            </button>
+          `;
+          cell.html(calendar);
+        } else {
+          cell.html(
+            "<input type='text' class='text-charcoal' placeholder='Filter..'/>"
+          );
+          this.setupColumnFilter(cell, api, colIdx);
+        }
+      });
+  }
+
+  /**
+   * Setup individual column filter
+   */
+  setupColumnFilter(cell, api, colIdx) {
+    const input = $("input", cell);
+
+    input.off("keyup change").on("keyup change", function (e) {
+      e.stopPropagation();
+      $(this).attr("title", $(this).val());
+
+      const regexr = "{search}";
+      const cursorPosition = this.selectionStart;
+
+      api
+        .column(colIdx)
+        .search(
+          this.value !== "" ? regexr.replace("{search}", this.value) : "",
+          this.value !== "",
+          this.value === ""
+        )
+        .draw();
+
+      $(this).focus()[0].setSelectionRange(cursorPosition, cursorPosition);
+    });
+  }
+
+  /**
+   * Setup all event handlers
+   */
+  setupEventHandlers() {
+    this.setupSearchHandler();
+    this.setupFilterHandlers();
+    this.setupDeleteHandler();
+  }
+
+  /**
+   * Setup search handler
+   */
+  setupSearchHandler() {
+    $(this.selectors.searchInput)
+      .off("keyup")
+      .on("keyup", () => {
+        this.table.search($(this.selectors.searchInput).val()).draw();
+      });
+  }
+
+  /**
+   * Setup filter handlers
+   */
+  setupFilterHandlers() {
+    $(this.selectors.clearFilter)
+      .off("click")
+      .on("click", (e) => {
+        e.preventDefault();
+        $(this.selectors.searchInput).val("");
+        this.clearDates();
+        $('.filters input[type="text"]').val("");
+        $(".filters select").val("");
+        this.table.search("").columns().search("").draw();
+      });
+
+    $(this.selectors.dateClear)
+      .off("click")
+      .on("click", () => this.clearDates());
+
+    $(this.selectors.dateFilterBtn)
+      .off("click")
+      .on("click", () => this.table.draw());
+  }
+
+  /**
+   * Setup delete handler
+   */
+  setupDeleteHandler() {
+    $(this.selectors.confirmDeleteBtn)
+      .off("click")
+      .on("click", (e) => {
+        e.preventDefault();
+        if (!this.config.deletingState) {
+          this.handleDelete();
+        }
+      });
+  }
+
+  /**
+   * Handle delete operation
+   */
+  handleDelete() {
+    const formData = new FormData();
+    formData.append("delete_shop", $(this.selectors.shopId).val());
+
+    $.ajax({
+      type: "POST",
+      url: $(this.selectors.form).attr("action"),
+      data: formData,
+      dataType: "json",
+      contentType: false,
+      processData: false,
+      headers: { "X-CSRFToken": this.config.csrfToken },
+      beforeSend: () => this.setDeleteLoading(true),
+      success: (response) => this.handleDeleteSuccess(response),
+      error: (xhr, status, error) => {
+        console.error("Delete error:", error);
+        this.setDeleteLoading(false);
+      },
+    });
+  }
+
+  /**
+   * Set delete loading state
+   */
+  setDeleteLoading(isLoading) {
+    this.config.deletingState = isLoading;
+    const cancelBtn = $(this.selectors.cancelDeleteBtn);
+    const confirmBtn = $(this.selectors.confirmDeleteBtn);
+
+    if (isLoading) {
+      cancelBtn.removeClass("d-inline-block").addClass("d-none");
+      confirmBtn.html("<i class='fas fa-spinner fa-pulse'></i>");
+    } else {
+      cancelBtn.removeClass("d-none").addClass("d-inline-block");
+      confirmBtn.html("<i class='fas fa-check-circle'></i> Yes");
+    }
+  }
+
+  /**
+   * Handle delete success
+   */
+  handleDeleteSuccess(response) {
+    this.config.deletingState = false;
+
+    if (response.success) {
+      alert("The shop has been deleted permanently..!");
+      window.location.href = response.url;
+    } else {
+      this.setDeleteLoading(false);
+      const feedback = this.generateAlert(response.success, response.sms);
+      $(`${this.selectors.deleteModal} .formsms`).html(feedback);
+    }
+  }
+}
+
+// Initialize the application when DOM is ready
+$(function () {
+  new ShopsManager();
 });

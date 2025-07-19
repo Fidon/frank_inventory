@@ -5,6 +5,7 @@
 {% endblock %}
 {% block styles %}
   <link href="{% static 'css/shops/sales_report.css' %}" rel="stylesheet" type="text/css" />
+  <link href="{% static 'datatables/DataTables-1.13.6/css/dataTables.bootstrap5.css' %}" rel="stylesheet" type="text/css" />
 {% endblock %}
 {% block contents %}
   <div class="search-box input-group w-100 float-start">
@@ -14,7 +15,7 @@
   
   <div class="table-container" id="table_container">
     <div class="table-responsive">
-      <table class="table text-charcoal table-striped" id="reports_table">
+      <table class="table text-charcoal table-striped table-hover" id="reports_table">
         <thead>
           <tr>
             <th></th>

@@ -5,6 +5,7 @@
 {% endblock %}
 {% block styles %}
   <link href="{% static 'css/users/users.css' %}" rel="stylesheet" type="text/css" />
+  <link href="{% static 'datatables/DataTables-1.13.6/css/dataTables.bootstrap5.css' %}" rel="stylesheet" type="text/css" />
 {% endblock %}
 {% block contents %}
   {% if userinfo %}
@@ -60,7 +61,7 @@
                             <div class="info-label">
                                 <i class="fas fa-money-bills me-2"></i>Total sales
                             </div>
-                            <div class="info-value">0.00</div>
+                            <div class="info-value">{{info.sales}} TZS</div>
                         </div>
 
                         <div class="info-row">
@@ -240,7 +241,7 @@
     
     <div class="table-container" id="table_container">
       <div class="table-responsive">
-        <table class="table" id="users_table">
+        <table class="table table-striped table-hover" id="users_table">
           <thead>
             <tr>
               <th>S/N</th>

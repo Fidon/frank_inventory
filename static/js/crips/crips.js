@@ -1,43 +1,33 @@
-class ProductsManager {
+class CripsManager {
   constructor() {
     this.config = {
       columnIndices: [0, 1, 2, 3, 4, 5, 6],
       dateCache: { start: null, end: null },
       csrfToken: this.getCSRFToken(),
-      blockingState: false,
-      qtyUpdateState: false,
       deletingState: false,
     };
 
     this.selectors = {
-      form: "#new_product_form",
-      table: "#products_table",
-      canvas: "#new_product_canvas",
-      cancelBtn: "#product_cancel_btn",
-      submitBtn: "#product_submit_btn",
-      searchInput: "#products_search",
-      clearFilter: "#products_filter_clear",
+      form: "#new_crips_form",
+      table: "#crips_table",
+      canvas: "#new_crips_canvas",
+      cancelBtn: "#crips_cancel_btn",
+      submitBtn: "#crips_submit_btn",
+      searchInput: "#crips_search",
+      clearFilter: "#crips_filter_clear",
       minDate: "#min_date",
       maxDate: "#max_date",
       dateClear: "#date_clear",
       dateFilterBtn: "#date_filter_btn",
       confirmDeleteBtn: "#confirm_delete_btn",
       cancelDeleteBtn: "#cancel_delete_btn",
-      productDiv: "#product_div",
-      productsListUrl: "#products_list_url",
-      productId: "#get_product_id",
+      cripsDiv: "#crips_div",
+      cripsListUrl: "#crips_list_url",
+      cripsId: "#get_crips_id",
       deleteModal: "#confirm_delete_modal",
-      blockBtn: "#item_blockbtn",
-      qtyAddBtn: "#newqty_addbtn",
-      qtyCancelBtn: "#newqty_cancelbtn",
-      qtyModal: "#new_qty_modal",
-      itemNewQty: "#item_new_qty",
-      itemUpQty: "#item_up_qty",
-      itemShop: "#item_shop",
     };
 
     this.table = null;
-    this.shopOptions = null;
     this.init();
   }
 
@@ -53,10 +43,21 @@ class ProductsManager {
    * Initialize the application
    */
   init() {
-    this.shopOptions = $(`${this.selectors.itemShop} option`);
     this.setupFormHandler();
     this.setupTable();
     this.setupEventHandlers();
+  }
+
+  /**
+   * Format currency for display
+   */
+  formatCurrency(num) {
+    return (
+      num.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) + " TZS"
+    );
   }
 
   /**
@@ -131,8 +132,8 @@ class ProductsManager {
     $(`${this.selectors.form} .formsms`).html(feedback);
 
     if (response.update_success) {
-      $(this.selectors.productDiv).load(
-        `${location.href} ${this.selectors.productDiv}`
+      $(this.selectors.cripsDiv).load(
+        `${location.href} ${this.selectors.cripsDiv}`
       );
       this.scrollToTop("html, body");
     } else if (response.success) {
@@ -227,7 +228,7 @@ class ProductsManager {
       serverSide: true,
       ajax: this.getAjaxConfig(),
       columns: this.getColumnConfig(),
-      order: [[1, "asc"]],
+      order: [[1, "desc"]],
       paging: true,
       lengthMenu: [
         [10, 20, 40, 50, 100, 200],
@@ -243,6 +244,7 @@ class ProductsManager {
       columnDefs: this.getColumnDefs(),
       dom: "lBfrtip",
       buttons: this.getButtonConfig(),
+      footerCallback: this.getFooterCallback(),
       initComplete: () => this.initTableFilters(),
     });
   }
@@ -252,7 +254,7 @@ class ProductsManager {
    */
   getAjaxConfig() {
     return {
-      url: $(this.selectors.productsListUrl).val(),
+      url: $(this.selectors.cripsListUrl).val(),
       type: "POST",
       data: (d) => {
         const dateRange = this.getDateRange();
@@ -261,6 +263,12 @@ class ProductsManager {
       },
       dataType: "json",
       headers: { "X-CSRFToken": this.config.csrfToken },
+      dataSrc: (json) => {
+        $(`${this.selectors.table} tfoot tr:eq(1) th:eq(5)`)
+          .html(json.grand_total)
+          .addClass("text-end pe-3");
+        return json.data;
+      },
     };
   }
 
@@ -270,12 +278,12 @@ class ProductsManager {
   getColumnConfig() {
     return [
       { data: "count" },
+      { data: "regdate" },
       { data: "name" },
-      { data: "shop" },
       { data: "qty" },
-      { data: "cost" },
       { data: "price" },
-      { data: "status" },
+      { data: "amount" },
+      { data: "info" },
     ];
   }
 
@@ -285,38 +293,20 @@ class ProductsManager {
   getColumnDefs() {
     return [
       {
-        targets: 0,
+        targets: [0, 6],
         orderable: false,
       },
       {
-        targets: 1,
-        className: "ellipsis text-start",
-        createdCell: (cell, cellData, rowData) => {
-          const cellContent = `
-            <a href="${rowData.info}" class="product-link">
-              <div class="product-info">
-                <div class="product-avatar">
-                  <i class="fas fa-box-open"></i>
-                </div>
-                <span>${rowData.name}</span>
-              </div>
-            </a>
-          `;
-          $(cell).html(cellContent);
-        },
-      },
-      {
-        targets: [4, 5],
-        className: "text-end pe-3",
+        targets: [3, 4, 5],
+        createdCell: (cell) => $(cell).addClass("text-end pe-3"),
       },
       {
         targets: 6,
         createdCell: (cell, cellData, rowData) => {
-          if (rowData.status === "Active") {
-            $(cell).addClass("text-success");
-          } else {
-            $(cell).addClass("text-danger");
-          }
+          const cellContent = `<a href="${rowData.info}" class="btn btn-success btn-sm">View</a>`;
+          $(cell)
+            .html(cellContent)
+            .addClass("align-middle text-nowrap text-center");
         },
       },
     ];
@@ -328,8 +318,8 @@ class ProductsManager {
   getButtonConfig() {
     const baseConfig = {
       className: "btn btn-extra text-white",
-      title: "Shop items - FrankApp",
-      exportOptions: { columns: this.config.columnIndices },
+      title: "Crips - FrankApp",
+      exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
     };
 
     return [
@@ -343,8 +333,8 @@ class ProductsManager {
         extend: "pdf",
         text: "<i class='fas fa-file-pdf'></i>",
         titleAttr: "Export to PDF",
-        filename: "shopitems-frankapp",
-        orientation: "landscape",
+        filename: "crips-frankapp",
+        orientation: "portrait",
         pageSize: "A4",
         footer: true,
         exportOptions: {
@@ -401,12 +391,11 @@ class ProductsManager {
       // Configure cell alignments and padding
       const cellConfigs = [
         { alignment: "center", margin: [3, 0, 0, 0] },
-        { alignment: "left" },
         { alignment: "center" },
         { alignment: "center" },
-        { alignment: "right" },
-        { alignment: "right" },
-        { alignment: "center", margin: [0, 0, 3, 0] },
+        { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "right", padding: [0, 10, 0, 0], margin: [0, 0, 3, 0] },
       ];
 
       cellConfigs.forEach((config, j) => {
@@ -430,6 +419,32 @@ class ProductsManager {
   }
 
   /**
+   * Get footer callback for DataTable
+   */
+  getFooterCallback() {
+    return (row, data, start, end, display) => {
+      const api = this.table;
+      const intVal = (i) =>
+        typeof i === "string"
+          ? i.replace(/[\s,]/g, "").replace(/TZS/g, "") * 1
+          : typeof i === "number"
+          ? i
+          : 0;
+
+      const amountTotal = api
+        .column(5)
+        .data()
+        .reduce((a, b) => intVal(a) + intVal(b), 0);
+
+      const pageTotalValue = this.formatCurrency(amountTotal);
+      $(api.table().footer())
+        .find("tr:eq(0) th:eq(5)")
+        .html(pageTotalValue)
+        .addClass("text-end pe-3");
+    };
+  }
+
+  /**
    * Initialize table filters
    */
   initTableFilters() {
@@ -444,12 +459,16 @@ class ProductsManager {
         );
         cell.addClass("bg-white");
 
-        if (colIdx === 0) {
+        if (colIdx === 0 || colIdx === 6) {
           cell.html("");
-        } else if (colIdx === 2) {
-          this.setupShopFilter(cell, api, colIdx);
-        } else if (colIdx === 6) {
-          this.setupStatusFilter(cell, api, colIdx);
+        } else if (colIdx === 1) {
+          const calendar = `
+          <button type="button" class="btn btn-sm btn-primary text-white" 
+                  data-bs-toggle="modal" data-bs-target="#date_filter_modal">
+            <i class="fas fa-calendar-alt"></i>
+          </button>
+        `;
+          cell.html(calendar);
         } else {
           cell.html(
             "<input type='text' class='text-charcoal' placeholder='Filter..'/>"
@@ -457,45 +476,6 @@ class ProductsManager {
           this.setupColumnFilter(cell, api, colIdx);
         }
       });
-  }
-
-  /**
-   * Setup shop filter dropdown
-   */
-  setupShopFilter(cell, api, colIdx) {
-    const select = document.createElement("select");
-    select.className = "select-filter text-charcoal float-start";
-    select.innerHTML = `<option value="">All</option>`;
-
-    this.shopOptions.each((index, option) => {
-      if (index === 0) return;
-      const optionText = $(option).text();
-      select.innerHTML += `<option value="${optionText}">${optionText}</option>`;
-    });
-
-    cell.html(select);
-    $(select).on("change", function () {
-      api.column(colIdx).search($(this).val()).draw();
-    });
-  }
-
-  /**
-   * Setup status filter dropdown
-   */
-  setupStatusFilter(cell, api, colIdx) {
-    const select = document.createElement("select");
-    select.className = "select-filter text-charcoal float-start";
-    select.innerHTML = `
-      <option value="">All</option>
-      <option value="Active">Active</option>
-      <option value="Blocked">Blocked</option>
-      <option value="SoldOut">SoldOut</option>
-    `;
-
-    cell.html(select);
-    $(select).on("change", function () {
-      api.column(colIdx).search($(this).val()).draw();
-    });
   }
 
   /**
@@ -531,8 +511,6 @@ class ProductsManager {
     this.setupSearchHandler();
     this.setupFilterHandlers();
     this.setupDeleteHandler();
-    this.setupBlockHandler();
-    this.setupQtyHandler();
   }
 
   /**
@@ -557,7 +535,6 @@ class ProductsManager {
         $(this.selectors.searchInput).val("");
         this.clearDates();
         $('.filters input[type="text"]').val("");
-        $(".filters select").val("");
         this.table.search("").columns().search("").draw();
       });
 
@@ -589,7 +566,7 @@ class ProductsManager {
    */
   handleDelete() {
     const formData = new FormData();
-    formData.append("delete_product", $(this.selectors.productId).val());
+    formData.append("delete_crips", $(this.selectors.cripsId).val());
 
     $.ajax({
       type: "POST",
@@ -632,7 +609,7 @@ class ProductsManager {
     this.config.deletingState = false;
 
     if (response.success) {
-      alert("The item/product has been deleted permanently..!");
+      alert("Record has been deleted permanently..!");
       window.location.href = response.url;
     } else {
       this.setDeleteLoading(false);
@@ -640,169 +617,9 @@ class ProductsManager {
       $(`${this.selectors.deleteModal} .formsms`).html(feedback);
     }
   }
-
-  /**
-   * Setup block/unblock handler
-   */
-  setupBlockHandler() {
-    $(this.selectors.blockBtn)
-      .off("click")
-      .on("click", (e) => {
-        e.preventDefault();
-        if (!this.config.blockingState) {
-          this.handleBlock();
-        }
-      });
-  }
-
-  /**
-   * Handle block/unblock operation
-   */
-  handleBlock() {
-    const btnHtml = $(this.selectors.blockBtn).html();
-    const formData = new FormData();
-    formData.append(
-      "block_product",
-      parseInt($(this.selectors.productId).val())
-    );
-
-    $.ajax({
-      type: "POST",
-      url: $(this.selectors.form).attr("action"),
-      data: formData,
-      dataType: "json",
-      contentType: false,
-      processData: false,
-      headers: { "X-CSRFToken": this.config.csrfToken },
-      beforeSend: () => this.setBlockLoading(true),
-      success: (response) => this.handleBlockSuccess(response, btnHtml),
-      error: (xhr, status, error) => {
-        console.error("Block error:", error);
-        this.setBlockLoading(false);
-        $(this.selectors.blockBtn).html(btnHtml);
-      },
-    });
-  }
-
-  /**
-   * Set block loading state
-   */
-  setBlockLoading(isLoading) {
-    this.config.blockingState = isLoading;
-
-    if (isLoading) {
-      $(this.selectors.blockBtn).html(
-        "<i class='fas fa-spinner fa-pulse'></i>Updating"
-      );
-    }
-  }
-
-  /**
-   * Handle block success
-   */
-  handleBlockSuccess(response, btnHtml) {
-    this.config.blockingState = false;
-
-    if (response.success) {
-      location.reload();
-    } else {
-      $(this.selectors.blockBtn).html(btnHtml);
-      alert("Operation failed, reload and try again");
-    }
-  }
-
-  /**
-   * Setup quantity update handler
-   */
-  setupQtyHandler() {
-    $(this.selectors.qtyAddBtn)
-      .off("click")
-      .on("click", (e) => {
-        e.preventDefault();
-        const checkQty = $(this.selectors.itemNewQty).val();
-
-        if (checkQty !== "" && checkQty >= 1) {
-          if (!this.config.qtyUpdateState) {
-            this.handleQtyUpdate();
-          }
-        } else {
-          const feedback = this.generateAlert(
-            false,
-            "New quantity should be 1 or more."
-          );
-          $(`${this.selectors.qtyModal} .formsms`).html(feedback);
-        }
-      });
-  }
-
-  /**
-   * Handle quantity update
-   */
-  handleQtyUpdate() {
-    const formData = new FormData();
-    formData.append("qty_product", $(this.selectors.productId).val());
-    formData.append("qty_new", $(this.selectors.itemNewQty).val());
-
-    $.ajax({
-      type: "POST",
-      url: $(this.selectors.form).attr("action"),
-      data: formData,
-      dataType: "json",
-      contentType: false,
-      processData: false,
-      headers: { "X-CSRFToken": this.config.csrfToken },
-      beforeSend: () => this.setQtyLoading(true),
-      success: (response) => this.handleQtySuccess(response),
-      error: (xhr, status, error) => {
-        console.error("Qty update error:", error);
-        this.setQtyLoading(false);
-      },
-    });
-  }
-
-  /**
-   * Set quantity loading state
-   */
-  setQtyLoading(isLoading) {
-    this.config.qtyUpdateState = isLoading;
-    const cancelBtn = $(this.selectors.qtyCancelBtn);
-    const addBtn = $(this.selectors.qtyAddBtn);
-
-    if (isLoading) {
-      cancelBtn.removeClass("d-inline-block").addClass("d-none");
-      addBtn.html("<i class='fas fa-spinner fa-pulse'></i> Adding");
-    } else {
-      cancelBtn.removeClass("d-none").addClass("d-inline-block");
-      addBtn.html("<i class='fas fa-check-circle'></i> Add");
-    }
-  }
-
-  /**
-   * Handle quantity update success
-   */
-  handleQtySuccess(response) {
-    this.config.qtyUpdateState = false;
-    const feedback = this.generateAlert(response.success, response.sms);
-
-    if (response.success) {
-      const newQty = parseFloat($(this.selectors.itemNewQty).val());
-      const currentQty = parseFloat($(this.selectors.itemUpQty).val());
-      const totalQty = newQty + currentQty;
-
-      $(this.selectors.itemUpQty).val(totalQty);
-      $(this.selectors.itemNewQty).val("");
-
-      $(this.selectors.productDiv).load(
-        `${location.href} ${this.selectors.productDiv}`
-      );
-    }
-
-    this.setQtyLoading(false);
-    $(`${this.selectors.qtyModal} .formsms`).html(feedback);
-  }
 }
 
 // Initialize the application when DOM is ready
 $(function () {
-  new ProductsManager();
+  new CripsManager();
 });

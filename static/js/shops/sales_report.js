@@ -1,22 +1,95 @@
-$(function () {
-  $("#sales_toggle").click();
+class SalesReportManager {
+  constructor() {
+    this.config = {
+      columnIndices: [0, 1, 2, 3, 4, 5, 6],
+      dateCache: { start: null, end: null },
+      csrfToken: this.getCSRFToken(),
+    };
 
-  var CSRF_TOKEN = document
-    .querySelector('meta[name="csrf-token"]')
-    .getAttribute("content");
-  const COLUMN_INDICES = [0, 1, 2, 3, 4, 5, 6];
-  const SHOP_OPTIONS = $("#shops_list option");
-  const DATE_CACHE = { start: null, end: null };
+    this.selectors = {
+      table: "#reports_table",
+      salesReportUrl: "#sales_report_url",
+      shopsList: "#shops_list",
+      searchInput: "#sales_search",
+      clearFilter: "#sales_filter_clear",
+      minDate: "#min_date",
+      maxDate: "#max_date",
+      dateClear: "#date_clear",
+      dateFilterBtn: "#date_filter_btn",
+      salesToggle: "#sales_toggle",
+    };
 
-  function generate_errorsms(status, sms) {
-    return `<div class="alert alert-${
-      status ? "success" : "danger"
-    } alert-dismissible fade show px-2 m-0 d-block w-100"><i class='fas fa-${status ? "check" : "exclamation"}-circle'></i> ${sms} <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button></div>`;
+    this.table = null;
+    this.init();
   }
 
-  function getDateRange() {
-    const minDateStr = $("#min_date").val();
-    const maxDateStr = $("#max_date").val();
+  /**
+   * Get CSRF token from meta tag
+   */
+  getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute("content") : "";
+  }
+
+  /**
+   * Initialize the application
+   */
+  init() {
+    $(this.selectors.salesToggle).click();
+    this.setupTable();
+    this.setupEventHandlers();
+  }
+
+  /**
+   * Generate alert messages
+   */
+  generateAlert(isSuccess, message) {
+    const alertType = isSuccess ? "success" : "danger";
+    const iconType = isSuccess ? "check" : "exclamation";
+
+    return `
+      <div class="alert alert-${alertType} alert-dismissible fade show px-2 m-0 d-block w-100">
+        <i class='fas fa-${iconType}-circle'></i> ${message}
+        <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button>
+      </div>
+    `;
+  }
+
+  /**
+   * Format row for child details
+   */
+  formatRow(data) {
+    let rowContents = "";
+    data.items.forEach((item) => {
+      rowContents += `
+        <div class="d-block w-100 float-start text-start my-1 px-2">
+          <span class="d-inline-block px-1">${item.count}.</span>
+          <span class="d-inline-block px-1 mx-1">${item.names}</span>
+          <span class="d-inline-block px-1 mx-1">${item.price} (${item.qty})</span>
+          <span class="d-inline-block px-1">= &nbsp; ${item.total}</span>
+        </div>`;
+    });
+    return rowContents;
+  }
+
+  /**
+   * Format currency for display
+   */
+  formatCurrency(num) {
+    return (
+      num.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) + " TZS"
+    );
+  }
+
+  /**
+   * Date range management
+   */
+  getDateRange() {
+    const minDateStr = $(this.selectors.minDate).val();
+    const maxDateStr = $(this.selectors.maxDate).val();
 
     try {
       let dtStartUtc = null;
@@ -38,9 +111,8 @@ $(function () {
         dtEndUtc = endDateLocal.toISOString();
       }
 
-      // Cache the results
-      DATE_CACHE.start = dtStartUtc;
-      DATE_CACHE.end = dtEndUtc;
+      this.config.dateCache.start = dtStartUtc;
+      this.config.dateCache.end = dtEndUtc;
 
       return { start: dtStartUtc, end: dtEndUtc };
     } catch (error) {
@@ -49,62 +121,82 @@ $(function () {
     }
   }
 
-  function clearDates() {
-    $("#min_date").val("");
-    $("#max_date").val("");
-    DATE_CACHE.start = null;
-    DATE_CACHE.end = null;
+  /**
+   * Clear date filters
+   */
+  clearDates() {
+    $(this.selectors.minDate).val("");
+    $(this.selectors.maxDate).val("");
+    this.config.dateCache.start = null;
+    this.config.dateCache.end = null;
   }
 
-  function format_row(d) {
-    let row_contents = ``;
-    let items = d.items;
-    items.forEach((item) => {
-      row_contents +=
-        `<div class="d-block w-100 float-start text-start my-1 px-2">` +
-        `<span class="d-inline-block px-1">${item.count}.</span>` +
-        `<span class="d-inline-block px-1 mx-1">${item.names}</span>` +
-        `<span class="d-inline-block px-1 mx-1">${item.price} (${item.qty})</span>` +
-        `<span class="d-inline-block px-1">= &nbsp; ${item.total}</span>` +
-        `</div>`;
+  /**
+   * Setup DataTable
+   */
+  setupTable() {
+    $(`${this.selectors.table} thead tr`)
+      .clone(true)
+      .attr("class", "filters")
+      .appendTo(`${this.selectors.table} thead`);
+
+    this.table = $(this.selectors.table).DataTable({
+      fixedHeader: true,
+      processing: true,
+      serverSide: true,
+      ajax: this.getAjaxConfig(),
+      columns: this.getColumnConfig(),
+      order: [[2, "desc"]],
+      paging: true,
+      lengthMenu: [
+        [10, 20, 40, 50, 100, 200],
+        [10, 20, 40, 50, 100, 200],
+      ],
+      pageLength: 10,
+      lengthChange: true,
+      autoWidth: true,
+      searching: true,
+      bInfo: true,
+      bSort: true,
+      orderCellsTop: true,
+      dom: "lBfrtip",
+      columnDefs: this.getColumnDefs(),
+      buttons: this.getButtonConfig(),
+      footerCallback: this.getFooterCallback(),
+      initComplete: () => this.initTableFilters(),
     });
-    return row_contents;
+
+    this.setupRowExpansion();
   }
 
-  function formatCurrency(num) {
-    return (
-      num.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }) + " TZS"
-    );
-  }
-
-  $("#reports_table thead tr")
-    .clone(true)
-    .attr("class", "filters")
-    .appendTo("#reports_table thead");
-  var reports_table = $("#reports_table").DataTable({
-    fixedHeader: true,
-    processing: true,
-    serverSide: true,
-    ajax: {
-      url: $("#sales_report_url").val(),
+  /**
+   * Get AJAX configuration for DataTable
+   */
+  getAjaxConfig() {
+    return {
+      url: $(this.selectors.salesReportUrl).val(),
       type: "POST",
-      data: function (d) {
-        const dateRange = getDateRange();
+      data: (d) => {
+        const dateRange = this.getDateRange();
         d.startdate = dateRange.start;
         d.enddate = dateRange.end;
       },
       dataType: "json",
-      headers: { "X-CSRFToken": CSRF_TOKEN },
-      dataSrc: function (json) {
-        var tableFooter = $("#reports_table tfoot");
-        $(tableFooter).find("tr").eq(1).find("th").eq(4).html(json.grand_total);
+      headers: { "X-CSRFToken": this.config.csrfToken },
+      dataSrc: (json) => {
+        $(`${this.selectors.table} tfoot tr:eq(1) th:eq(4)`)
+          .html(json.grand_total)
+          .addClass("text-end pe-3");
         return json.data;
       },
-    },
-    columns: [
+    };
+  }
+
+  /**
+   * Get column configuration
+   */
+  getColumnConfig() {
+    return [
       {
         className: "dt-control text-success",
         data: null,
@@ -116,270 +208,286 @@ $(function () {
       { data: "amount" },
       { data: "customer" },
       { data: "user" },
-    ],
-    order: [[2, "desc"]],
-    paging: true,
-    lengthMenu: [
-      [10, 20, 40, 50, 100, 200],
-      [10, 20, 40, 50, 100, 200],
-    ],
-    pageLength: 10,
-    lengthChange: true,
-    autoWidth: true,
-    searching: true,
-    bInfo: true,
-    bSort: true,
-    orderCellsTop: true,
-    dom: "lBfrtip",
-    columnDefs: [
+    ];
+  }
+
+  /**
+   * Get column definitions
+   */
+  getColumnDefs() {
+    return [
       {
         targets: [0, 1],
         orderable: false,
       },
       {
         targets: 4,
-        createdCell: function (cell, cellData, rowData, rowIndex, colIndex) {
-          $(cell).attr("class", "text-end pe-4");
-        },
+        createdCell: (cell) => $(cell).addClass("text-end pe-4"),
       },
       {
-        targets: 5,
-        createdCell: function (cell, cellData, rowData, rowIndex, colIndex) {
-          $(cell).attr("class", "ellipsis text-start ps-1");
-        },
+        targets: [5, 6],
+        createdCell: (cell) => $(cell).addClass("ellipsis text-start ps-1"),
       },
+    ];
+  }
+
+  /**
+   * Get button configuration for DataTable
+   */
+  getButtonConfig() {
+    const baseConfig = {
+      className: "btn btn-extra text-white",
+      title: "Sales report - FrankApp",
+      exportOptions: { columns: [1, 2, 3, 4, 5, 6] },
+    };
+
+    return [
       {
-        targets: 6,
-        createdCell: function (cell, cellData, rowData, rowIndex, colIndex) {
-          $(cell).attr("class", "ellipsis text-start ps-1");
-        },
-      },
-    ],
-    buttons: [
-      {
-        // Copy button
         extend: "copy",
         text: "<i class='fas fa-clone'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Copy",
-        title: "Sales report - FrankApp",
-        exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
-        },
+        ...baseConfig,
       },
       {
-        // PDF button
         extend: "pdf",
         text: "<i class='fas fa-file-pdf'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Export to PDF",
-        title: "Sales report - FrankApp",
         filename: "sales-report",
         orientation: "landscape",
         pageSize: "A4",
         footer: true,
         exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
+          ...baseConfig.exportOptions,
           search: "applied",
           order: "applied",
         },
-        tableHeader: {
-          alignment: "center",
-        },
-        customize: function (doc) {
-          doc.styles.tableHeader.alignment = "center";
-          doc.styles.tableBodyOdd.alignment = "center";
-          doc.styles.tableBodyEven.alignment = "center";
-          doc.styles.tableHeader.fontSize = 11;
-          doc.defaultStyle.fontSize = 11;
-          doc.content[1].table.widths = Array(
-            doc.content[1].table.body[1].length + 1
-          )
-            .join("*")
-            .split("");
-
-          var body = doc.content[1].table.body;
-          for (i = 1; i < body.length; i++) {
-            doc.content[1].table.body[i][0].margin = [3, 0, 0, 0];
-            doc.content[1].table.body[i][0].alignment = "center";
-            doc.content[1].table.body[i][1].alignment = "center";
-            doc.content[1].table.body[i][2].alignment = "center";
-            doc.content[1].table.body[i][3].alignment = "right";
-            doc.content[1].table.body[i][3].padding = [0, 10, 0, 0];
-            doc.content[1].table.body[i][4].alignment = "left";
-            doc.content[1].table.body[i][5].alignment = "left";
-            doc.content[1].table.body[i][5].margin = [0, 0, 3, 0];
-
-            for (let j = 0; j < body[i].length; j++) {
-              body[i][j].style = "vertical-align: middle;";
-            }
-          }
-        },
+        tableHeader: { alignment: "center" },
+        customize: this.customizePDF.bind(this),
+        ...baseConfig,
       },
       {
-        // Export to excel button
         extend: "excel",
         text: "<i class='fas fa-file-excel'></i>",
-        className: "btn btn-extra text-white",
         titleAttr: "Export to Excel",
-        title: "Sales report - FrankApp",
-        exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
-        },
+        ...baseConfig,
       },
       {
-        // Print button
         extend: "print",
         text: "<i class='fas fa-print'></i>",
-        className: "btn btn-extra text-white",
-        title: "Sales report - FrankApp",
+        titleAttr: "Print",
         orientation: "landscape",
         pageSize: "A4",
-        titleAttr: "Print",
         footer: true,
         exportOptions: {
-          columns: [1, 2, 3, 4, 5, 6],
+          ...baseConfig.exportOptions,
           search: "applied",
           order: "applied",
         },
-        tableHeader: {
-          alignment: "center",
-        },
-        customize: function (win) {
-          $(win.document.body).css("font-size", "11pt");
-          $(win.document.body)
-            .find("table")
-            .addClass("compact")
-            .css("font-size", "inherit");
-        },
+        tableHeader: { alignment: "center" },
+        customize: this.customizePrint.bind(this),
+        ...baseConfig,
       },
-    ],
-    footerCallback: function (row, data, start, end, display) {
-      var api = this.api(),
-        data;
-      var intVal = function (i) {
-        return typeof i === "string"
+    ];
+  }
+
+  /**
+   * Customize PDF export
+   */
+  customizePDF(doc) {
+    doc.styles.tableHeader.alignment = "center";
+    doc.styles.tableBodyOdd.alignment = "center";
+    doc.styles.tableBodyEven.alignment = "center";
+    doc.styles.tableHeader.fontSize = 11;
+    doc.defaultStyle.fontSize = 11;
+    doc.content[1].table.widths = Array(doc.content[1].table.body[1].length + 1)
+      .join("*")
+      .split("");
+
+    const body = doc.content[1].table.body;
+    for (let i = 1; i < body.length; i++) {
+      const cellConfigs = [
+        { alignment: "center", margin: [3, 0, 0, 0] },
+        { alignment: "center" },
+        { alignment: "center" },
+        { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "left" },
+        { alignment: "left", margin: [0, 0, 3, 0] },
+      ];
+
+      cellConfigs.forEach((config, j) => {
+        if (body[i][j]) {
+          Object.assign(body[i][j], config);
+          body[i][j].style = "vertical-align: middle;";
+        }
+      });
+    }
+  }
+
+  /**
+   * Customize print output
+   */
+  customizePrint(win) {
+    $(win.document.body).css("font-size", "11pt");
+    $(win.document.body)
+      .find("table")
+      .addClass("compact")
+      .css("font-size", "inherit");
+  }
+
+  /**
+   * Get footer callback for DataTable
+   */
+  getFooterCallback() {
+    return (row, data, start, end, display) => {
+      const api = this.table;
+      const intVal = (i) =>
+        typeof i === "string"
           ? i.replace(/[\s,]/g, "").replace(/TZS/g, "") * 1
           : typeof i === "number"
           ? i
           : 0;
-      };
-      var salesTotal = api
+
+      const salesTotal = api
         .column(4)
         .data()
-        .reduce(function (a, b) {
-          return intVal(a) + intVal(b);
-        }, 0);
+        .reduce((a, b) => intVal(a) + intVal(b), 0);
 
-      $(api.column(4).footer()).html(formatCurrency(salesTotal));
-    },
-    initComplete: function () {
-      var api = this.api();
-      api
-        .columns(COLUMN_INDICES)
-        .eq(0)
-        .each(function (colIdx) {
-          var cell = $(".filters th").eq(
-            $(api.column(colIdx).header()).index()
-          );
-          cell.addClass("bg-white");
+      $(api.column(4).footer())
+        .html(this.formatCurrency(salesTotal))
+        .addClass("text-end pe-3");
+    };
+  }
 
-          if (colIdx == 2) {
-            var calendar = `<button type="button" class="btn btn-sm btn-primary text-white" data-bs-toggle="modal" data-bs-target="#date_filter_modal"><i class="fas fa-calendar-alt"></i></button>`;
-            cell.html(calendar);
-          } else if (colIdx == 3) {
-            var select = document.createElement("select");
-            select.className = "select-filter text-charcoal float-start";
-            select.innerHTML = `<option value="">All</option>`;
-            SHOP_OPTIONS.each(function () {
-              select.innerHTML += `<option value="${$(this).text()}">${$(
-                this
+  /**
+   * Initialize table filters
+   */
+  initTableFilters() {
+    const api = this.table;
+
+    api
+      .columns(this.config.columnIndices)
+      .eq(0)
+      .each((colIdx) => {
+        const cell = $(".filters th").eq(
+          $(api.column(colIdx).header()).index()
+        );
+        cell.addClass("bg-white");
+
+        if (colIdx === 0 || colIdx === 1) {
+          cell.html("");
+        } else if (colIdx === 2) {
+          const calendar = `
+            <button type="button" class="btn btn-sm btn-primary text-white" 
+                    data-bs-toggle="modal" data-bs-target="#date_filter_modal">
+              <i class="fas fa-calendar-alt"></i>
+            </button>
+          `;
+          cell.html(calendar);
+        } else if (colIdx === 3) {
+          const select = document.createElement("select");
+          select.className = "select-filter text-charcoal float-start";
+          select.innerHTML = `<option value="">All</option>`;
+          $(this.selectors.shopsList)
+            .find("option")
+            .each((_, opt) => {
+              select.innerHTML += `<option value="${$(opt).text()}">${$(
+                opt
               ).text()}</option>`;
             });
-            cell.html(select);
-            $(select).on("change", function () {
-              api.column(colIdx).search($(this).val()).draw();
-            });
-          } else if (colIdx == 0 || colIdx == 1) {
-            cell.html("");
-          } else {
-            $(cell).html(
-              "<input type='text' class='text-charcoal' placeholder='Filter..'/>"
-            );
-            $(
-              "input",
-              $(".filters th").eq($(api.column(colIdx).header()).index())
-            )
-              .off("keyup change")
-              .on("keyup change", function (e) {
-                e.stopPropagation();
-                $(this).attr("title", $(this).val());
-                var regexr = "{search}";
-                var cursorPosition = this.selectionStart;
-                api
-                  .column(colIdx)
-                  .search(
-                    this.value != ""
-                      ? regexr.replace("{search}", this.value)
-                      : "",
-                    this.value != "",
-                    this.value == ""
-                  )
-                  .draw();
-                $(this)
-                  .focus()[0]
-                  .setSelectionRange(cursorPosition, cursorPosition);
-              });
-          }
-        });
-    },
-  });
+          cell.html(select);
+          $(select).on("change", () =>
+            api.column(colIdx).search($(select).val()).draw()
+          );
+        } else {
+          cell.html(
+            "<input type='text' class='text-charcoal' placeholder='Filter..'/>"
+          );
+          this.setupColumnFilter(cell, api, colIdx);
+        }
+      });
+  }
 
-  reports_table.on("click", "td.dt-control", function (e) {
-    let tr = e.target.closest("tr");
-    let row = reports_table.row(tr);
-    let td = $(e.target).is("#reports_table tr td")
-      ? $(e.target)
-      : $(e.target).parent();
+  /**
+   * Setup individual column filter
+   */
+  setupColumnFilter(cell, api, colIdx) {
+    const input = $("input", cell);
 
-    if (row.child.isShown()) {
-      row.child.hide();
-      td.removeClass("text-danger").addClass("text-success");
-      td.html(`<i class='fas fa-circle-chevron-right'></i>`);
-    } else {
-      row.child(format_row(row.data()), "bg-white").show();
-      td.removeClass("text-success").addClass("text-danger");
-      td.html(`<i class='fas fa-circle-chevron-down'></i>`);
-    }
-  });
+    input.off("keyup change").on("keyup change", function (e) {
+      e.stopPropagation();
+      $(this).attr("title", $(this).val());
 
-  // Event handlers on user search and date filtering
-  $("#sales_search")
-    .off("keyup")
-    .on("keyup", function () {
-      reports_table.search($(this).val()).draw();
+      const regexr = "{search}";
+      const cursorPosition = this.selectionStart;
+
+      api
+        .column(colIdx)
+        .search(
+          this.value !== "" ? regexr.replace("{search}", this.value) : "",
+          this.value !== "",
+          this.value === ""
+        )
+        .draw();
+
+      $(this).focus()[0].setSelectionRange(cursorPosition, cursorPosition);
     });
+  }
 
-  $("#sales_filter_clear")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      $("#sales_search").val("");
-      clearDates();
-      $(".filters input[type='text']").val("");
-      $(".filters select").val("");
-      reports_table.columns().search("").draw();
-    });
+  /**
+   * Setup row expansion for child rows
+   */
+  setupRowExpansion() {
+    this.table.on("click", "td.dt-control", (e) => {
+      const tr = e.target.closest("tr");
+      const row = this.table.row(tr);
+      const td = $(e.target).is("#reports_table tr td")
+        ? $(e.target)
+        : $(e.target).parent();
 
-  $("#date_clear")
-    .off("click")
-    .on("click", function () {
-      clearDates();
+      if (row.child.isShown()) {
+        row.child.hide();
+        td.removeClass("text-danger").addClass("text-success");
+        td.html(`<i class='fas fa-circle-chevron-right'></i>`);
+      } else {
+        row.child(this.formatRow(row.data()), "bg-white").show();
+        td.removeClass("text-success").addClass("text-danger");
+        td.html(`<i class='fas fa-circle-chevron-down'></i>`);
+      }
     });
+  }
 
-  $("#date_filter_btn")
-    .off("click")
-    .on("click", function () {
-      reports_table.draw();
-    });
+  /**
+   * Setup all event handlers
+   */
+  setupEventHandlers() {
+    $(this.selectors.searchInput)
+      .off("keyup")
+      .on("keyup", () => {
+        this.table.search($(this.selectors.searchInput).val()).draw();
+      });
+
+    $(this.selectors.clearFilter)
+      .off("click")
+      .on("click", (e) => {
+        e.preventDefault();
+        $(this.selectors.searchInput).val("");
+        this.clearDates();
+        $(".filters input[type='text']").val("");
+        $(".filters select").val("");
+        this.table.search("").columns().search("").draw();
+      });
+
+    $(this.selectors.dateClear)
+      .off("click")
+      .on("click", () => this.clearDates());
+
+    $(this.selectors.dateFilterBtn)
+      .off("click")
+      .on("click", () => this.table.draw());
+  }
+}
+
+// Initialize the application when DOM is ready
+$(function () {
+  new SalesReportManager();
 });

@@ -1,0 +1,5 @@
+Primary: Vibrant Orange (#FF6B35),
+Secondary: Deep Navy (#2C3E50),
+Accent: Bright Yellow (#FFD23F),
+Background: Soft Cream (#FFF8F0),
+Text: Charcoal (#2D3748)

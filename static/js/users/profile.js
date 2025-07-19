@@ -1,108 +1,169 @@
-$(function () {
-  var CSRF_TOKEN = document
-    .querySelector('meta[name="csrf-token"]')
-    .getAttribute("content");
+class ProfileManager {
+  constructor() {
+    this.config = {
+      csrfToken: this.getCSRFToken(),
+    };
 
-  function generate_errorsms(status, sms) {
-    return `<div class="alert alert-${
-      status ? "success" : "danger"
-    } alert-dismissible fade show px-2 m-0 d-block w-100"><i class='fas fa-${status ? "check" : "exclamation"}-circle'></i> ${sms} <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button></div>`;
+    this.selectors = {
+      passwordForm: "#change_password_form",
+      profileForm: "#profile_update_form",
+      passwordCancelBtn: "#pass_cancel_btn",
+      passwordSubmitBtn: "#pass_submit_btn",
+      profileCancelBtn: "#profile_cancel_btn",
+      profileSubmitBtn: "#profile_submit_btn",
+      userDiv: "#user_div",
+    };
+
+    this.init();
   }
 
-  $("#change_password_form").submit(function (e) {
-    e.preventDefault();
+  /**
+   * Get CSRF token from meta tag
+   */
+  getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute("content") : "";
+  }
+
+  /**
+   * Initialize the application
+   */
+  init() {
+    this.setupFormHandlers();
+  }
+
+  /**
+   * Generate alert messages
+   */
+  generateAlert(isSuccess, message) {
+    const alertType = isSuccess ? "success" : "danger";
+    const iconType = isSuccess ? "check" : "exclamation";
+
+    return `
+      <div class="alert alert-${alertType} alert-dismissible fade show px-2 m-0 d-block w-100">
+        <i class='fas fa-${iconType}-circle'></i> ${message}
+        <button type="button" class="btn-close d-inline-block" data-bs-dismiss="alert"></button>
+      </div>
+    `;
+  }
+
+  /**
+   * Setup form submission handlers
+   */
+  setupFormHandlers() {
+    $(this.selectors.passwordForm).on("submit", (e) =>
+      this.handlePasswordFormSubmit(e)
+    );
+    $(this.selectors.profileForm).on("submit", (e) =>
+      this.handleProfileFormSubmit(e)
+    );
+  }
+
+  /**
+   * Set form loading state
+   */
+  setFormLoading(isLoading, cancelBtnSelector, submitBtnSelector) {
+    const cancelBtn = $(cancelBtnSelector);
+    const submitBtn = $(submitBtnSelector);
+
+    if (isLoading) {
+      cancelBtn.removeClass("d-inline-block").addClass("d-none");
+      submitBtn
+        .html("<i class='fas fa-spinner fa-pulse'></i> Saving")
+        .attr("type", "button");
+    } else {
+      cancelBtn.removeClass("d-none").addClass("d-inline-block");
+      submitBtn
+        .html("<i class='fas fa-check-circle'></i> Save")
+        .attr("type", "submit");
+    }
+  }
+
+  /**
+   * Scroll to top utility
+   */
+  scrollToTop(selector) {
+    $(selector).animate({ scrollTop: 0 }, "slow");
+  }
+
+  /**
+   * Handle AJAX form submission
+   */
+  handleAjaxSubmit(
+    formSelector,
+    cancelBtnSelector,
+    submitBtnSelector,
+    successCallback
+  ) {
+    const form = $(formSelector);
+
     $.ajax({
       type: "POST",
-      url: $(this).attr("action"),
-      data: new FormData($(this)[0]),
+      url: form.attr("action"),
+      data: new FormData(form[0]),
       dataType: "json",
       contentType: false,
       processData: false,
-      headers: {
-        "X-CSRFToken": CSRF_TOKEN,
+      headers: { "X-CSRFToken": this.config.csrfToken },
+      beforeSend: () =>
+        this.setFormLoading(true, cancelBtnSelector, submitBtnSelector),
+      success: (response) => {
+        this.setFormLoading(false, cancelBtnSelector, submitBtnSelector);
+        const feedback = this.generateAlert(response.success, response.sms);
+        this.scrollToTop(formSelector);
+        $(`${formSelector} .formsms`).html(feedback);
+        successCallback(response);
       },
-      beforeSend: function () {
-        $("#pass_cancel_btn").removeClass("d-inline-block").addClass("d-none");
-        $("#pass_submit_btn")
-          .html("<i class='fas fa-spinner fa-pulse'></i> Saving")
-          .attr("type", "button");
-      },
-      success: function (response) {
-        $("#pass_cancel_btn").removeClass("d-none").addClass("d-inline-block");
-        $("#pass_submit_btn")
-          .html("<i class='fas fa-check-circle'></i> Save")
-          .attr("type", "submit");
-
-        var fdback = generate_errorsms(response.success, response.sms);
-
-        $("#change_password_form").animate({ scrollTop: 0 }, "slow");
-        $("#change_password_form .formsms").html(fdback);
-
-        if (response.success) {
-          $("#change_password_form")[0].reset();
-        }
-      },
-      error: function (xhr, status, error) {
-        $("#pass_cancel_btn").removeClass("d-none").addClass("d-inline-block");
-        $("#pass_submit_btn")
-          .html("<i class='fas fa-check-circle'></i> Save")
-          .attr("type", "submit");
-        $("#change_password_form .formsms").html(
-          generate_errorsms(false, "Unknown error, reload & try again")
+      error: () => {
+        this.setFormLoading(false, cancelBtnSelector, submitBtnSelector);
+        const feedback = this.generateAlert(
+          false,
+          "Unknown error, reload & try again"
         );
+        this.scrollToTop(formSelector);
+        $(`${formSelector} .formsms`).html(feedback);
       },
     });
-  });
+  }
 
-  $("#profile_update_form").submit(function (e) {
+  /**
+   * Handle password form submission
+   */
+  handlePasswordFormSubmit(e) {
     e.preventDefault();
-
-    $.ajax({
-      type: "POST",
-      url: $(this).attr("action"),
-      data: new FormData($(this)[0]),
-      dataType: "json",
-      contentType: false,
-      processData: false,
-      headers: {
-        "X-CSRFToken": CSRF_TOKEN,
-      },
-      beforeSend: function () {
-        $("#profile_cancel_btn")
-          .removeClass("d-inline-block")
-          .addClass("d-none");
-        $("#profile_submit_btn")
-          .html("<i class='fas fa-spinner fa-pulse'></i> Saving")
-          .attr("type", "button");
-      },
-      success: function (response) {
-        $("#profile_cancel_btn")
-          .removeClass("d-none")
-          .addClass("d-inline-block");
-        $("#profile_submit_btn")
-          .html("<i class='fas fa-check-circle'></i> Save")
-          .attr("type", "submit");
-
-        var fdback = generate_errorsms(response.success, response.sms);
-
-        $("#profile_update_form").animate({ scrollTop: 0 }, "slow");
-        $("#profile_update_form .formsms").html(fdback);
-
+    this.handleAjaxSubmit(
+      this.selectors.passwordForm,
+      this.selectors.passwordCancelBtn,
+      this.selectors.passwordSubmitBtn,
+      (response) => {
         if (response.success) {
-          $("#user_div").load(location.href + " #user_div");
+          $(this.selectors.passwordForm)[0].reset();
         }
-      },
-      error: function (xhr, status, error) {
-        $("#profile_cancel_btn")
-          .removeClass("d-none")
-          .addClass("d-inline-block");
-        $("#profile_submit_btn")
-          .html("<i class='fas fa-check-circle'></i> Save")
-          .attr("type", "submit");
-        $("#profile_update_form .formsms").html(
-          generate_errorsms(false, "Unknown error, reload & try again")
-        );
-      },
-    });
-  });
+      }
+    );
+  }
+
+  /**
+   * Handle profile form submission
+   */
+  handleProfileFormSubmit(e) {
+    e.preventDefault();
+    this.handleAjaxSubmit(
+      this.selectors.profileForm,
+      this.selectors.profileCancelBtn,
+      this.selectors.profileSubmitBtn,
+      (response) => {
+        if (response.success) {
+          $(this.selectors.userDiv).load(
+            `${location.href} ${this.selectors.userDiv}`
+          );
+        }
+      }
+    );
+  }
+}
+
+// Initialize the application when DOM is ready
+$(function () {
+  new ProfileManager();
 });

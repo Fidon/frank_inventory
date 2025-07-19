@@ -35,6 +35,13 @@
                             </div>
                             <div class="info-value" id="phone">{{profile.phone}}</div>
                         </div>
+
+                        <div class="info-row">
+                            <div class="info-label">
+                                <i class="fas fa-money-bills me-2"></i>Total sales
+                            </div>
+                            <div class="info-value">{{profile.sales}} TZS</div>
+                        </div>
                     </div>
 
                     <!-- Action Buttons -->
@@ -63,7 +70,7 @@
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-start" id="password_update_canvas">
+  <div class="offcanvas offcanvas-start" id="password_update_canvas">
     <div class="offcanvas-header bg-charcoal">
       <h6 class="offcanvas-title text-white">Change password..</h6>
       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -114,6 +121,7 @@
           </div>
           <textarea name="comment" class="d-none"></textarea>
           <input type="hidden" name="update_profile" value="1" />
+          <input type="hidden" name="shop" value="{{profile.shop}}">
           <div class="form-floating d-block w-100 float-start my-3 text-end">
             <button type="button" class="btn btn-danger d-inline-block me-2" id="profile_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
             <button type="submit" class="btn btn-success d-inline-block" id="profile_submit_btn">Save</button>
@@ -122,25 +130,26 @@
       </div>
     </div>
   {% else %}
-    <div class="offcanvas offcanvas-start" id="contact_update_canvas">
-      <div class="offcanvas-header bg-charcoal">
-        <h6 class="offcanvas-title text-white">Change phone number..</h6>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-      </div>
-      <div class="offcanvas-body">
-        <form action="{% url 'user_profile' %}" autocomplete="off" class="d-block w-100 float-start" id="profile_update_form">
-          <div class="formsms w-100 float-start my-1 text-start"></div>
-          <div class="form-floating d-block w-100 float-start my-1">
-            <input type="tel" maxlength="13" pattern="^\+255\d{9}$" title="Phone number format +255XXXXXXXXX" class="form-control" name="change_contact" id="prof_contact" value="{{ profile.mobile }}" placeholder="p" required />
-            <label for="prof_contact" class="form-label">Current contact</label>
-          </div>
-          <div class="form-floating d-block w-100 float-start my-3 text-end">
-            <button type="button" class="btn btn-danger d-inline-block me-2" id="profile_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
-            <button type="submit" class="btn btn-success d-inline-block" id="profile_submit_btn">Save</button>
-          </div>
-        </form>
-      </div>
+
+  <div class="offcanvas offcanvas-start" id="contact_update_canvas">
+    <div class="offcanvas-header bg-charcoal">
+      <h6 class="offcanvas-title text-white">Change phone number..</h6>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
+    <div class="offcanvas-body">
+      <form action="{% url 'user_profile' %}" autocomplete="off" class="d-block w-100 float-start" id="profile_update_form">
+        <div class="formsms w-100 float-start my-1 text-start"></div>
+        <div class="form-floating d-block w-100 float-start my-1">
+          <input type="tel" maxlength="13" pattern="^\+255\d{9}$" title="Phone number format +255XXXXXXXXX" class="form-control" name="change_contact" id="prof_contact" value="{{ profile.mobile }}" placeholder="p" required />
+          <label for="prof_contact" class="form-label">Current contact</label>
+        </div>
+        <div class="form-floating d-block w-100 float-start my-3 text-end">
+          <button type="button" class="btn btn-danger d-inline-block me-2" id="profile_cancel_btn" data-bs-dismiss="offcanvas">Cancel</button>
+          <button type="submit" class="btn btn-success d-inline-block" id="profile_submit_btn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
   {% endif %}
 {% endblock %}
 {% block scripts %}
