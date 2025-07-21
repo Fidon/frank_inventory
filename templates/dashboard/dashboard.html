@@ -1,0 +1,465 @@
+{% extends 'master.html' %}
+{% load static %}
+{% block title %}
+  Dashboard
+{% endblock %}
+{% block styles %}
+  <link href="{% static 'css/dashboard/dashboard.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+{% block contents %}
+<div class="welcome-section" id="welcome-section">
+  <div class="welcome-text">
+    <h2 id="user_name_txt">{{ request.user.username }}</h2>
+    <p id="clock"></p>
+  </div>
+</div>
+
+<div class="container-fluid dashboard-container">
+    <!-- Stats Cards Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card secondary h-100">
+                <div class="card-body p-4">
+                    <div class="stats-icon icon-secondary">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h2 class="metric-value">TSh {{ total_sales|default:"0k" }}</h2>
+                    <p class="metric-label mb-2">Monthly Sales</p>
+                    {% if sales_percent|slice:":1" == "-" %}
+                        <div class="metric-change change-negative">
+                            <i class="fas fa-arrow-down"></i> {{sales_percent}} vs last month
+                        </div>
+                    {% else %}
+                        <div class="metric-change change-positive">
+                            <i class="fas fa-arrow-up"></i> {{sales_percent}} vs last month
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card h-100">
+                <div class="card-body p-4">
+                    <div class="stats-icon icon-primary">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    <h2 class="metric-value">{{ total_profits|default:"0" }}</h2>
+                    <p class="metric-label mb-2">Monthly profit</p>
+                    {% if profits_percent|slice:":1" == "-" %}
+                        <div class="metric-change change-negative">
+                            <i class="fas fa-arrow-down"></i> {{profits_percent}} vs last month
+                        </div>
+                    {% else %}
+                        <div class="metric-change change-positive">
+                            <i class="fas fa-arrow-up"></i> {{profits_percent}} vs last month
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card accent h-100">
+                <div class="card-body p-4">
+                    <div class="stats-icon icon-accent">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h2 class="metric-value">{{ low_stock_count|default:"0" }}</h2>
+                    <p class="metric-label mb-2">Low Stock Alerts</p>
+                    <div class="metric-change change-negative">
+                        <i class="fas fa-arrow-up"></i> +{{low_stock_count}} new alerts
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card success h-100">
+                <div class="card-body p-4">
+                    <div class="stats-icon icon-success">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h2 class="metric-value">{{ active_users|default:"0" }}</h2>
+                    <p class="metric-label mb-2">Active Users</p>
+                    <div class="metric-change change-positive">
+                        <i class="fas fa-arrow-up"></i> +{{weekly_users}} active this week
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-8 col-lg-7">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Sales Overview - Last 7 Days
+                </h3>
+                <div style="height: 300px;">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-4 col-lg-5">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Stock by Shop
+                </h3>
+                <canvas id="stockChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="quick-actions">
+                <h3 class="chart-title mb-3">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h3>
+                <div class="row g-3">
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <a href="{% url 'sales_page' %}" class="quick-action-btn">
+                            <i class="fas fa-cash-register fa-2x mb-2"></i>
+                            <span>New Sale</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <a href="{% url 'products_page' %}" class="quick-action-btn">
+                            <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                            <span>Add Product</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <a href="{% url 'products_page' %}" class="quick-action-btn">
+                            <i class="fas fa-warehouse fa-2x mb-2"></i>
+                            <span>Stock Check</span>
+                        </a>
+                    </div>
+                    {% if request.user.is_admin %}
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <a href="{% url 'users_page' %}" class="quick-action-btn">
+                            <i class="fas fa-user-plus fa-2x mb-2"></i>
+                            <span>Add User</span>
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <a href="{% url 'user_profile' %}" class="quick-action-btn">
+                            <i class="fas fa-user fa-2x mb-2"></i>
+                            <span>Profile</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <a href="{% url 'shops_page' %}" class="quick-action-btn">
+                            <i class="fas fa-store fa-2x mb-2"></i>
+                            <span>Shops</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <a href="{% url 'sales_report' %}" class="quick-action-btn">
+                            <i class="fas fa-file fa-2x mb-2"></i>
+                            <span>Reports</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="activity-table">
+                <div class="table-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-history me-2"></i> <span>Recent Sales</span>
+                    </h4>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="searchInput" class="form-control search-box" placeholder="Search..">
+                        <a href="{% url 'sales_report' %}">
+                            <button class="btn btn-primary text-white">
+                                <i class="fas fa-file me-2"></i>Reports
+                            </button>
+                        </a>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped text-charcoal mb-0" id="transactionsTable">
+                        <thead class="text-center">
+                            <tr>
+                                <th>S/n</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Amount</th>
+                                <th>Shop</th>
+                                <th>User</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in recent_sales %}
+                            <tr>
+                                <td class="text-center">#00{{ sale.count }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <i class="fas fa-box-open text-muted"></i>
+                                        </div>
+                                        <div>{{ sale.product }}</div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4">{{ sale.qty }}</td>
+                                <td class="text-end pe-4">{{ sale.amount }}</td>
+                                <td class="ps-2">{{ sale.shop }}</td>
+                                <td>{{ sale.user }}</td>
+                                <td class="text-nowrap">{{ sale.date }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">No recent sales recorded yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'js/chart.min.js' %}"></script>
+  <script src="{% static 'js/dashboard/dashboard.js' %}"></script>
+  <script>
+    // Generate last 7 days labels from today
+        function getLast7DaysLabels() {
+            const labels = [];
+            const today = new Date();
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                labels.push(date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                }));
+            }
+            return labels;
+        }
+
+        // Define colors for different shops
+        const shopColors = [
+            { bg: 'rgba(255, 107, 53, 0.1)', border: '#FF6B35' },
+            { bg: 'rgba(44, 62, 80, 0.1)', border: '#2C3E50' },
+            { bg: 'rgba(255, 210, 63, 0.1)', border: '#FFD23F' },
+            { bg: 'rgba(40, 167, 69, 0.1)', border: '#28a745' },
+            { bg: 'rgba(111, 66, 193, 0.1)', border: '#6f42c1' },
+            { bg: 'rgba(220, 53, 69, 0.1)', border: '#dc3545' },
+            { bg: 'rgba(0, 123, 255, 0.1)', border: '#007bff' },
+            { bg: 'rgba(255, 193, 7, 0.1)', border: '#ffc107' },
+            { bg: 'rgba(23, 162, 184, 0.1)', border: '#17a2b8' },
+            { bg: 'rgba(108, 117, 125, 0.1)', border: '#6c757d' },
+            { bg: 'rgba(255, 99, 132, 0.1)', border: '#ff6384' },
+            { bg: 'rgba(54, 162, 235, 0.1)', border: '#36a2eb' },
+            { bg: 'rgba(255, 206, 86, 0.1)', border: '#ffce56' },
+            { bg: 'rgba(75, 192, 192, 0.1)', border: '#4bc0c0' },
+            { bg: 'rgba(153, 102, 255, 0.1)', border: '#9966ff' },
+            { bg: 'rgba(255, 159, 64, 0.1)', border: '#ff9f40' },
+            { bg: 'rgba(201, 203, 207, 0.1)', border: '#c9cbcf' },
+            { bg: 'rgba(0, 200, 83, 0.1)', border: '#00c853' },
+            { bg: 'rgba(255, 87, 34, 0.1)', border: '#ff5722' },
+            { bg: 'rgba(121, 85, 72, 0.1)', border: '#795548' }
+        ];
+
+        // Sales Chart
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        
+        // Default sample data for multiple shops (replace with Django context)
+        const defaultShopsData = [
+            {
+                name: 'Shop1',
+                sales: [0, 0, 0, 0, 0, 0, 0]
+            }
+        ];
+
+        // Use Django context data or default sample data
+        const shopsData = {{ shops_sales_data|safe|default:"defaultShopsData" }};
+        
+        // Generate datasets for each shop
+        const datasets = shopsData.map((shop, index) => ({
+            label: shop.name,
+            data: shop.data,
+            backgroundColor: shopColors[index % shopColors.length].bg,
+            borderColor: shopColors[index % shopColors.length].border,
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: shopColors[index % shopColors.length].border,
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+        }));
+
+        const salesChart = new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: getLast7DaysLabels(),
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#2D3748',
+                        bodyColor: '#2D3748',
+                        borderColor: '#e9ecef',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': TSh ' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return (value / 1000);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        hoverRadius: 8
+                    }
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                }
+            }
+        });
+
+    // Stock Distribution Chart
+    const stockCtx = document.getElementById('stockChart').getContext('2d');
+    const stockChart = new Chart(stockCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ stock_shops|safe|default:"['Shop1', 'Shop2', 'Shop3']" }},
+            datasets: [{
+                data: {{ stock_distribution|safe|default:"[35, 25, 10]" }},
+                backgroundColor: [
+                    '#FF6B35',
+                    '#2C3E50',
+                    '#FFD23F',
+                    '#28a745',
+                    '#6f42c1',
+                    '#dc3545',
+                    '#007bff',
+                    '#ffc107',
+                    '#17a2b8',
+                    '#6c757d',
+                    '#ff6384',
+                    '#36a2eb',
+                    '#ff5722',
+                    '#ffce56',
+                    '#4bc0c0',
+                    '#9966ff',
+                    '#ff9f40',
+                    '#c9cbcf',
+                    '#00c853',
+                    '#795548'
+                ],
+                borderWidth: 0,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll('#transactionsTable tbody tr');
+        
+        tableRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Add subtle animations on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.stats-card');
+        cards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 50);
+            }, index * 100);
+        });
+    });
+</script>
+{% endblock %}

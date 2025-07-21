@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, F, QuerySet
-from datetime import date
+from django.utils import timezone
 from dateutil.parser import parse
 import zoneinfo
 from decimal import Decimal
@@ -307,6 +307,7 @@ class ProductManagementService:
                 return {'success': False, 'sms': 'Failed to update quantity.'}
             
             product.qty += qty_value
+            product.restock_date = timezone.now().date()
             product.save()
             logger.info(f"Quantity updated for product {product_id}")
             return {'success': True, 'sms': 'Item stock updated.'}
@@ -338,7 +339,7 @@ class ProductManagementService:
             
             product_status = "Sold Out" if product.qty == 0 else (
                 "Blocked" if product.is_hidden else
-                "Expired" if product.expiry_date and product.expiry_date <= date.today() else
+                "Expired" if product.expiry_date and product.expiry_date <= timezone.now().date() else
                 "Available"
             )
             
@@ -503,11 +504,12 @@ class SalesManagementService:
             if not full_cart:
                 return {'success': False, 'sms': 'Cart is empty.'}
             
-            grand_amount, qty_status, qty_products = 0, True, []
+            grand_amount, profit_count, qty_status, qty_products = 0, 0, True, []
             cart_shops = set()
             
             for item in full_cart:
                 grand_amount += item.product.price * item.qty
+                profit_count += item.product.price - item.product.cost
                 cart_shops.add(item.product.shop)
                 if item.qty > item.product.qty:
                     qty_status = False
@@ -524,7 +526,8 @@ class SalesManagementService:
                 amount=grand_amount,
                 customer='n/a' if not customer.strip() else customer.strip(),
                 comment=None if not comment.strip() else comment.strip(),
-                shop=list(cart_shops)[0]
+                shop=list(cart_shops)[0],
+                profit=profit_count
             )
             
             for item in full_cart:
@@ -742,7 +745,7 @@ class ProductDataTablesService:
             return "SoldOut"
         if item.is_hidden:
             return "Blocked"
-        if item.expiry_date and item.expiry_date <= date.today():
+        if item.expiry_date and item.expiry_date <= timezone.now().date():
             return "Expired"
         return "Active"
 
@@ -814,7 +817,7 @@ class SalesDataTablesService:
                 if Cart.objects.filter(user=user, product=product).exists() else 0
             }
             for product in queryset
-            if product.expiry_date is None or product.expiry_date > date.today()
+            if product.expiry_date is None or product.expiry_date > timezone.now().date()
         ]
 
     @staticmethod

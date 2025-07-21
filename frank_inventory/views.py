@@ -12,11 +12,6 @@ def index_page(request):
         return response
     return render(request, 'index.html')
 
-@login_required
-@never_cache
-def dashboard_page(request):
-    return render(request, 'dashboard.html')
-
 def error_404(request, exception):
     return render(request, '404.html', status=404)
 

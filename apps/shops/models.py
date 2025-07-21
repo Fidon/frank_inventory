@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 # shop model
 class Shop(models.Model):
@@ -45,6 +46,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Selling Price")
     is_hidden = models.BooleanField(default=False, verbose_name="Temporarily Unavailable")
     is_deleted = models.BooleanField(default=False, verbose_name="Deleted")
+    restock_date = models.DateField(default=timezone.now, verbose_name="Last Restock Date")
     expiry_date = models.DateField(null=True, blank=True, default=None, verbose_name="Expiry Date")
     comment = models.TextField(null=True, blank=True, default=None, verbose_name="Additional Notes")
 
@@ -80,6 +82,7 @@ class Sales(models.Model):
     user = models.ForeignKey('users.CustomUser', on_delete=models.PROTECT, related_name='sales_user')
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='shop_sale')
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Sale amount")
+    profit = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Profit")
     customer = models.CharField(max_length=255, default='n/a', verbose_name="Customer name")
     comment = models.TextField(null=True, blank=True, default=None)
     

@@ -1,0 +1,36 @@
+
+// Custom Bootstrap theme with vibrant colors
+@import "../bootstrap-5.3.0/scss/functions";
+@import "../bootstrap-5.3.0/scss/variables";
+@import "../bootstrap-5.3.0/scss/mixins";
+
+// Custom color variables
+$primary: #FF6B35; // Vibrant Orange
+$secondary: #2C3E50; // Deep Navy
+$accent: #FFD23F; // Bright Yellow
+$background: #FFF8F0; // Soft Cream
+$text-color: #2D3748; // Charcoal
+$extra_color: #FF6B35; // Redefined for datatables buttons
+
+// Merge custom colors into Bootstrap theme
+$theme-colors: map-merge($theme-colors, (
+  "primary": $primary,
+  "secondary": $secondary,
+  "accent": $accent,
+  "background": $background,
+  "charcoal": $text-color,
+  "extra": $extra_color,
+));
+
+// Optional utility colors if needed individually
+$custom-colors: (
+  "vibrant-orange": $primary,
+  "deep-navy": $secondary,
+  "bright-yellow": $accent,
+  "soft-cream": $background,
+  "charcoal": $text-color,
+  "orange-again": $extra_color,
+);
+
+// Include all of Bootstrap
+@import "../bootstrap-5.3.0/scss/bootstrap";

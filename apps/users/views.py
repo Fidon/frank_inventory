@@ -259,9 +259,8 @@ class AuthenticationService:
                 # Get redirect URL
                 next_url = post_data.get('next_url', reverse('dashboard_page'))
                 
-                # Create response with user cookie
+                # Create response 
                 response = JsonResponse({'success': True, 'url': next_url})
-                response.set_cookie('name_text', user.username)
                 
                 logger.info(f"User {user.username} logged in successfully")
                 return response
@@ -606,7 +605,6 @@ def signout_page(request: HttpRequest) -> HttpResponse:
     if request.user.is_authenticated:
         logout(request)
         response = redirect(reverse('index_page'))
-        response.delete_cookie('username')
         return response
     return redirect(reverse('dashboard_page'))
 

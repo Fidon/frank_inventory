@@ -1,0 +1,371 @@
+/* ========================================
+   NAVIGATION STYLES
+   ======================================== */
+.sidebar-nav .nav-link.crips {
+  background-color: var(--primary-color);
+  color: white;
+  border-left-color: var(--accent-color);
+}
+
+/* ========================================
+   SEARCH BOX STYLES
+   ======================================== */
+.search-box {
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(44, 62, 80, 0.1);
+  padding: 15px 10px;
+  background-color: white;
+}
+
+.search-box .form-control {
+  border: 1px solid rgba(255, 107, 53, 0.5);
+  border-radius: 6px;
+  outline: none;
+  color: var(--text-color);
+  transition: all 0.4s ease;
+}
+
+/* ========================================
+   FORM CONTROLS AND FOCUS STATES
+   ======================================== */
+.offcanvas .form-control,
+.offcanvas .form-select {
+  transition: all 0.4s ease;
+}
+
+.search-box .form-control:focus,
+.offcanvas .form-control:focus,
+.offcanvas .form-select:focus {
+  border-color: rgba(255, 107, 53, 0.8);
+  outline: none;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 7px rgba(255, 107, 53, 0.6);
+}
+
+/* ========================================
+   TABLE CONTAINER STYLES
+   ======================================== */
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 10px;
+  display: block;
+  width: 100%;
+  float: left;
+  padding: 15px 10px;
+}
+
+/* ========================================
+   TABLE STYLES
+   ======================================== */
+.table {
+  margin-bottom: 0;
+  text-align: center;
+  font-size: 16px;
+}
+
+.table thead th {
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 1rem;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+
+.table td {
+  padding: 10px 5px;
+  vertical-align: middle;
+  border: none;
+  color: var(--text-color);
+}
+
+.table .crips-info {
+  display: flex;
+  align-items: center;
+}
+
+/* ========================================
+   DATATABLES CUSTOMIZATION
+   ======================================== */
+
+/* Hide default search filter */
+.table-container .dataTables_filter {
+  display: none;
+}
+
+/* Length selector */
+.table-container .dataTables_length {
+  float: left;
+  color: #696969;
+  margin: 10px 0;
+  padding: 0 5px;
+  padding-top: 5px;
+  border-radius: 3px;
+}
+
+.table-container .dataTables_length label {
+  display: inline-flex !important;
+}
+
+.table-container .dataTables_length select.form-select {
+  margin: 0 3px;
+  border: 1px solid rgba(255, 107, 53, 0.8);
+  position: relative;
+  top: -4px;
+}
+
+/* Buttons container */
+.table-container .dt-buttons {
+  float: right;
+  margin: 10px 0;
+}
+
+/* Info text */
+.table-container .dataTables_info {
+  width: auto;
+  float: left;
+  color: #696969;
+  margin-top: 15px;
+  margin-bottom: 5px;
+}
+
+/* Table header inputs and selects */
+.table-container .table th input,
+.table-container .table th select {
+  border: 1px solid rgba(255, 107, 53, 0.6);
+  padding-left: 3px;
+  font-size: 13px;
+  height: 30px;
+  border-radius: 3px;
+  width: auto;
+  min-width: 100px;
+  transition: all 0.5s ease;
+}
+
+/* Date filter modal inputs */
+#date_filter_modal input {
+  border: 1px solid rgba(255, 107, 53, 0.6);
+}
+
+/* Focus states for various form elements */
+.table-container .dataTables_length .form-select:focus,
+.table-container .table th input:focus,
+.table-container .table th select:focus,
+#date_filter_modal input:focus {
+  border-color: #ff6b35;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 7px rgba(255, 107, 53, 0.6);
+  outline: none;
+}
+
+/* Pagination container */
+.table-container .dataTables_paginate {
+  width: auto;
+  float: right;
+  margin-top: 15px;
+  margin-bottom: 5px;
+}
+
+/* Pagination list */
+.table-container .dataTables_paginate ul {
+  border: 1px solid rgba(255, 107, 53, 0.6);
+  border-radius: 5px;
+  color: #696969;
+}
+
+/* Pagination links */
+.table-container .dataTables_paginate ul li a {
+  color: #0f4a4e;
+}
+
+/* Active pagination item */
+.table-container .dataTables_paginate ul li.active a {
+  background-color: #ff6b35;
+  border: 1px solid #ff6b35;
+  color: #cce8d9;
+}
+
+/* Disabled pagination item */
+.table-container .dataTables_paginate ul li.disabled a {
+  background-color: transparent;
+  border: none;
+  color: #696969;
+  cursor: not-allowed;
+}
+
+/* Pagination hover state */
+.table-container .dataTables_paginate ul li a:hover {
+  background-color: rgba(255, 107, 53, 0.7);
+  border: 1px solid rgba(255, 107, 53, 0.7);
+  color: #cce8d9;
+}
+
+/* Pagination focus state */
+.table-container .dataTables_paginate ul li a:focus {
+  box-shadow: none;
+}
+
+/* ========================================
+   CRIPS DETAILS PAGE STYLES
+   ======================================== */
+
+/* Header section */
+.container-fluid .crips-header {
+  background: linear-gradient(135deg, var(--primary-color), #2d3748);
+  color: white;
+  border-radius: 12px 12px 0 0;
+  padding: 1.5rem;
+}
+
+/* Avatar circle */
+.container-fluid .crips-avatar {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+/* Information rows */
+.container-fluid .info-row {
+  padding: 1rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.container-fluid .info-row:last-child {
+  border-bottom: none;
+}
+
+/* Information labels and values */
+.container-fluid .info-label {
+  font-weight: 600;
+  color: var(--secondary-color);
+  margin-bottom: 0.25rem;
+}
+
+.container-fluid .info-value {
+  color: var(--text-color);
+  font-size: 1rem;
+  font-style: italic;
+}
+
+/* ========================================
+   ACTION BUTTONS STYLES
+   ======================================== */
+
+/* Base action button styles */
+.container-fluid .action-btn {
+  position: relative;
+  overflow: hidden;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 13px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, transparent, transparent);
+}
+
+/* Shimmer effect for buttons */
+.container-fluid .action-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.container-fluid .action-btn:hover::before {
+  left: 100%;
+}
+
+/* Button icon animation */
+.container-fluid .action-btn i {
+  transition: transform 0.3s ease;
+}
+
+.container-fluid .action-btn:hover i {
+  transform: scale(1.1);
+}
+
+/* Update button styling */
+.container-fluid .btn-update {
+  background: linear-gradient(135deg, var(--primary-color), #ff8c5a);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.container-fluid .btn-update:hover {
+  background: linear-gradient(135deg, #e55a2b, #ff6b35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+  color: white;
+}
+
+/* Delete button styling */
+.container-fluid .btn-delete {
+  background: linear-gradient(135deg, #dc3545, #e74c3c);
+  color: white;
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.container-fluid .btn-delete:hover {
+  background: linear-gradient(135deg, #c82333, #dc3545);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+  color: white;
+}
+
+/* Action buttons container */
+.container-fluid .action-buttons {
+  padding: 1.5rem;
+  background: #fafafa;
+  border-radius: 0 0 12px 12px;
+}
+
+/* ========================================
+   DATATABLES SORTING ICONS
+   ======================================== */
+table.dataTable thead .sorting:after,
+table.dataTable thead .sorting_asc:after,
+table.dataTable thead .sorting_desc:after,
+table.dataTable thead .sorting:before,
+table.dataTable thead .sorting_asc:before,
+table.dataTable thead .sorting_desc:before {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ========================================
+   RESPONSIVE STYLES
+   ======================================== */
+@media (max-width: 768px) {
+  .search-box,
+  .table-container {
+    padding: 8px;
+  }
+
+  .table {
+    font-size: 15px;
+  }
+}
