@@ -347,6 +347,7 @@ class ProductManagementService:
                 'id': product.id,
                 'regdate': conv_timezone(product.created_at, '%d-%b-%Y %H:%M:%S'),
                 'lastupdated': conv_timezone(product.updated_at, '%d-%b-%Y %H:%M:%S'),
+                'restock': product.restock_date.strftime('%d-%b-%Y'),
                 'shop': product.shop,
                 'name': product.name,
                 'cost': product.cost,
