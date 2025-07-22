@@ -536,7 +536,8 @@ class SalesManagementService:
                     sale=sale_transaction,
                     product=item.product,
                     price=item.product.price,
-                    qty=item.qty
+                    qty=item.qty,
+                    profit=(item.product.price - item.product.cost) * item.qty
                 )
                 item.product.qty -= item.qty
                 item.product.save()
@@ -947,14 +948,16 @@ class SalesItemsReportDataTablesService:
         4: 'price',
         5: 'qty',
         6: 'amount',
-        7: 'user'
+        7: 'profit',
+        8: 'user'
     }
 
     COLUMN_FILTER_TYPES = {
         'shop': 'exact',
         'amount': 'numeric',
         'price': 'numeric',
-        'qty': 'numeric'
+        'qty': 'numeric',
+        'profit': 'numeric',
     }
 
     @staticmethod
@@ -977,6 +980,7 @@ class SalesItemsReportDataTablesService:
                 'price': item.price,
                 'qty': item.qty,
                 'amount': item.price * item.qty,
+                'profit': item.profit,
                 'user': item.sale.user.username if not item.sale.user.deleted else f"{item.sale.user.username} (deleted)"
             }
             for item in queryset
@@ -1008,6 +1012,7 @@ class SalesItemsReportDataTablesService:
                 'price': format_number(item.get('price')) + " TZS",
                 'qty': format_number(item.get('qty')),
                 'amount': format_number(item.get('amount')) + " TZS",
+                'profit': format_number(item.get('profit')) + " TZS",
                 'user': item.get('user')
             }
             for i, item in enumerate(data)
@@ -1661,6 +1666,7 @@ def sales_items_report(request: HttpRequest) -> HttpResponse:
             records_filtered = len(base_data)
             
             grand_total_amount = sum(item['amount'] for item in base_data)
+            grand_total_profit = sum(item['profit'] for item in base_data)
             
             paginated_data = DataTablesBaseService.paginate_data(
                 base_data, params['start'], params['length']
@@ -1675,7 +1681,8 @@ def sales_items_report(request: HttpRequest) -> HttpResponse:
                 'recordsTotal': total_records,
                 'recordsFiltered': records_filtered,
                 'data': final_data,
-                'grand_total': format_number(grand_total_amount) + " TZS"
+                'grand_total': format_number(grand_total_amount) + " TZS",
+                'grand_profit': format_number(grand_total_profit) + " TZS"
             }
             return JsonResponse(ajax_response)
             

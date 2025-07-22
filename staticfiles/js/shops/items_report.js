@@ -1,7 +1,7 @@
 class ItemsReportManager {
   constructor() {
     this.config = {
-      columnIndices: [0, 1, 2, 3, 4, 5, 6, 7],
+      columnIndices: [0, 1, 2, 3, 4, 5, 6, 7, 8],
       dateCache: { start: null, end: null },
       csrfToken: this.getCSRFToken(),
     };
@@ -166,6 +166,9 @@ class ItemsReportManager {
         $(`${this.selectors.table} tfoot tr:eq(1) th:eq(6)`)
           .html(json.grand_total)
           .addClass("text-end pe-3");
+        $(`${this.selectors.table} tfoot tr:eq(1) th:eq(7)`)
+          .html(json.grand_profit)
+          .addClass("text-end pe-3");
         return json.data;
       },
     };
@@ -183,6 +186,7 @@ class ItemsReportManager {
       { data: "price" },
       { data: "qty" },
       { data: "amount" },
+      { data: "profit" },
       { data: "user" },
     ];
   }
@@ -201,11 +205,11 @@ class ItemsReportManager {
         createdCell: (cell) => $(cell).addClass("text-nowrap"),
       },
       {
-        targets: [3, 7],
+        targets: [3, 8],
         createdCell: (cell) => $(cell).addClass("ellipsis text-start"),
       },
       {
-        targets: [4, 5, 6],
+        targets: [4, 5, 6, 7],
         createdCell: (cell) => $(cell).addClass("text-end pe-4"),
       },
     ];
@@ -293,6 +297,7 @@ class ItemsReportManager {
         { alignment: "right", padding: [0, 10, 0, 0] },
         { alignment: "right", padding: [0, 10, 0, 0] },
         { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "right", padding: [0, 10, 0, 0] },
         { alignment: "left", margin: [0, 0, 3, 0] },
       ];
 
@@ -334,10 +339,19 @@ class ItemsReportManager {
         .data()
         .reduce((a, b) => intVal(a) + intVal(b), 0);
 
-      const pageTotalValue = this.formatCurrency(salesTotal);
+      const profitTotal = api
+        .column(7)
+        .data()
+        .reduce((a, b) => intVal(a) + intVal(b), 0);
+
       $(api.table().footer())
         .find("tr:eq(0) th:eq(6)")
-        .html(pageTotalValue)
+        .html(this.formatCurrency(salesTotal))
+        .addClass("text-end pe-3");
+
+      $(api.table().footer())
+        .find("tr:eq(0) th:eq(7)")
+        .html(this.formatCurrency(profitTotal))
         .addClass("text-end pe-3");
     };
   }
