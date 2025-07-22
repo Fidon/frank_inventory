@@ -139,7 +139,7 @@ class ShopManagementService:
                 'names': shop.names,
                 'abbrev': shop.abbrev,
                 'comment': shop.comment or 'N/A',
-                'users_count': format_number(CustomUser.objects.filter(shop=shop, deleted=False).count()),
+                'users_count': format_number(CustomUser.objects.filter(shop=shop, deleted=False, is_admin=False).count()),
                 'items_count': format_number(Product.objects.filter(shop=shop, is_deleted=False).count()),
                 'networth': format_number(net_worth),
                 'delete_info': False if shop.id == 1 else True
@@ -651,7 +651,7 @@ class ShopDataTablesService:
                 'regdate': shop.created_at,
                 'names': shop.names,
                 'abbrev': shop.abbrev,
-                'users_count': CustomUser.objects.filter(shop=shop, deleted=False).count(),
+                'users_count': CustomUser.objects.filter(shop=shop, deleted=False, is_admin=False).count(),
                 'items_count': Product.objects.filter(shop=shop, is_deleted=False).count(),
                 'networth': Product.objects.filter(shop=shop, is_deleted=False).aggregate(
                     total_value=Sum(F('qty') * F('price'))
