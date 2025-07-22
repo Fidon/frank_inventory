@@ -1,7 +1,7 @@
 class SalesReportManager {
   constructor() {
     this.config = {
-      columnIndices: [0, 1, 2, 3, 4, 5, 6],
+      columnIndices: [0, 1, 2, 3, 4, 5, 6, 7],
       dateCache: { start: null, end: null },
       csrfToken: this.getCSRFToken(),
     };
@@ -200,6 +200,9 @@ class SalesReportManager {
         $(`${this.selectors.table} tfoot tr:eq(1) th:eq(4)`)
           .html(json.grand_total)
           .addClass("text-end pe-3");
+        $(`${this.selectors.table} tfoot tr:eq(1) th:eq(5)`)
+          .html(json.grand_profit)
+          .addClass("text-end pe-3");
         return json.data;
       },
     };
@@ -219,6 +222,7 @@ class SalesReportManager {
       { data: "saledate" },
       { data: "shop" },
       { data: "amount" },
+      { data: "profit" },
       { data: "customer" },
       { data: "user" },
     ];
@@ -238,11 +242,11 @@ class SalesReportManager {
         createdCell: (cell) => $(cell).addClass("text-nowrap"),
       },
       {
-        targets: 4,
+        targets: [4, 5],
         createdCell: (cell) => $(cell).addClass("text-end pe-4"),
       },
       {
-        targets: [5, 6],
+        targets: [6, 7],
         createdCell: (cell) => $(cell).addClass("ellipsis text-start ps-1"),
       },
     ];
@@ -255,7 +259,7 @@ class SalesReportManager {
     const baseConfig = {
       className: "btn btn-extra text-white",
       title: "Sales report - FrankApp",
-      exportOptions: { columns: [1, 2, 3, 4, 5, 6] },
+      exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] },
     };
 
     return [
@@ -327,6 +331,7 @@ class SalesReportManager {
         { alignment: "center" },
         { alignment: "center" },
         { alignment: "right", padding: [0, 10, 0, 0] },
+        { alignment: "right", padding: [0, 10, 0, 0] },
         { alignment: "left" },
         { alignment: "left", margin: [0, 0, 3, 0] },
       ];
@@ -369,8 +374,17 @@ class SalesReportManager {
         .data()
         .reduce((a, b) => intVal(a) + intVal(b), 0);
 
+      const profitTotal = api
+        .column(5)
+        .data()
+        .reduce((a, b) => intVal(a) + intVal(b), 0);
+
       $(api.column(4).footer())
         .html(this.formatCurrency(salesTotal))
+        .addClass("text-end pe-3");
+
+      $(api.column(5).footer())
+        .html(this.formatCurrency(profitTotal))
         .addClass("text-end pe-3");
     };
   }
